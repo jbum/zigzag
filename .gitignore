@@ -1,0 +1,6 @@
+.autoenv*
+.claude/
+__pycache__/
+assets/
+original_pdfs/
+sample_finished_puzzle

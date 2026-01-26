@@ -1,0 +1,4 @@
+# Sample test suite for Slants puzzles
+# Format: name	width	height	givens	answer	# comment
+
+SGT_8x8_test_1	8	8	c120a0b21h3a2114f3a2b2a4b2110a1a1b1c2132d1b1a33a1a1c0b		# From Simon Tatham's site
