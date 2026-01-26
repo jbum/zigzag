@@ -22,7 +22,7 @@ Here is the plan for making this software:
 
 2. Implement a representation class of the board and its cells and vertices for use in solvers. For vertices we need to know its given if it has one. For cells they either have the value UNKNOWN (0), SLASH (1) or BACKSLASH (2).
 
-3. Generate a production rule (non-brute force) solver in solver_PR.txt that implements a solve function. Initial rules are explicated in rules.md.  We repeatedly loop thru rules from easiest to hardest until we hit one that makes progress or the puzzle is fully solved.  The **main** functionality tests the sample puzzle given above by default, or accepts a new set of givens on the command line.  We will be reusing the rule set, so keep the rules in a reuseable slants_rules.py file.
+3. Generate a production rule (non-brute force) solver in solver_PR.txt that implements a solve function. Initial rules are explicated in RULES.md.  We repeatedly loop thru rules from easiest to hardest until we hit one that makes progress or the puzzle is fully solved.  The **main** functionality tests the sample puzzle given above by default, or accepts a new set of givens on the command line.  We will be reusing the rule set, so keep the rules in a reuseable slants_rules.py file.
 
 5. Add additional rules using observations from the wikipedia article. It contains several simple patterns we can follow.
 
