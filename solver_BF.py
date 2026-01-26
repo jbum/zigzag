@@ -21,6 +21,7 @@ from slants_rules import (
     rule_v_pattern_with_three,
     rule_border_two_v_shape,
     rule_single_path_extension,
+    rule_diagonal_ones
 )
 
 
@@ -39,6 +40,7 @@ RULES = [
     ("v_pattern_with_three", 6, rule_v_pattern_with_three),
     ("adjacent_ones", 8, rule_adjacent_ones),
     ("adjacent_threes", 8, rule_adjacent_threes),
+    ("diagonal_ones", 8, rule_diagonal_ones),
 ]
 
 
