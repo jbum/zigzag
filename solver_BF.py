@@ -32,13 +32,13 @@ RULES = [
     ("no_loops", 2, 1, rule_no_loops),
     ("edge_clue_constraints", 2, 2, rule_edge_clue_constraints),
     ("border_two_v_shape", 3, 2, rule_border_two_v_shape),
-    ("single_path_extension", 3, 2, rule_single_path_extension),
-    ("forced_solution_avoidance", 5, 2, rule_forced_solution_avoidance),
+    # ("single_path_extension", 3, 2, rule_single_path_extension),  # Redundant, slows performance
+    # ("forced_solution_avoidance", 5, 2, rule_forced_solution_avoidance),  # Redundant, slows performance
     ("loop_avoidance_2", 5, 1, rule_loop_avoidance_2),
     ("v_pattern_with_three", 6, 2, rule_v_pattern_with_three),
     ("adjacent_ones", 8, 2, rule_adjacent_ones),
     ("adjacent_threes", 8, 2, rule_adjacent_threes),
-    ("diagonal_ones", 8, 2, rule_diagonal_ones),
+    # ("diagonal_ones", 8, 2, rule_diagonal_ones),  # Redundant, slows performance
 ]
 
 
