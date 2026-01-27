@@ -5,8 +5,6 @@ Production Rule Solver for Slants (Gokigen Naname) puzzles.
 import sys
 from slants_board import Board, SolverDebugError, UNKNOWN
 from slants_rules import (
-    rule_corner_zero,
-    rule_corner_four,
     rule_clue_finish_a,
     rule_clue_finish_b,
     rule_no_loops,
@@ -25,49 +23,31 @@ from slants_rules import (
 
 
 # Rules Registry - rules are tried in order, from easiest/cheapest to hardest
-# Format: (name, work_score, rule_function)
+# Format: (name, work_score, tier, rule_function)
+# Tier: 1 = score < 8, 2 = score >= 8 and < 10, 3 = score >= 10
 RULES = [
-    ("corner_zero", 1, rule_corner_zero),
-    ("corner_four", 1, rule_corner_four),
-    ("clue_finish_b", 1, rule_clue_finish_b),  # Has enough touches, fill avoiders
-    ("clue_finish_a", 2, rule_clue_finish_a),  # Needs all remaining to touch
-    ("no_loops", 2, rule_no_loops),
-    ("edge_clue_constraints", 2, rule_edge_clue_constraints),
-    ("border_two_v_shape", 3, rule_border_two_v_shape),
-    ("single_path_extension", 3, rule_single_path_extension),
-    ("forced_solution_avoidance", 5, rule_forced_solution_avoidance),
-    ("loop_avoidance_2", 5, rule_loop_avoidance_2),
-    ("v_pattern_with_three", 6, rule_v_pattern_with_three),
-    ("adjacent_ones", 8, rule_adjacent_ones),
-    ("adjacent_threes", 8, rule_adjacent_threes),
-    ("diagonal_ones", 8, rule_diagonal_ones),
-    ("trial_clue_violation", 10, rule_trial_clue_violation),
-    ("one_step_lookahead", 15, rule_one_step_lookahead),
+    ("clue_finish_b", 1, 1, rule_clue_finish_b),  # Has enough touches, fill avoiders
+    ("clue_finish_a", 2, 1, rule_clue_finish_a),  # Needs all remaining to touch
+    ("no_loops", 2, 1, rule_no_loops),
+    ("edge_clue_constraints", 2, 2, rule_edge_clue_constraints),
+    ("border_two_v_shape", 3, 2, rule_border_two_v_shape),
+    ("single_path_extension", 3, 2, rule_single_path_extension),
+    ("forced_solution_avoidance", 5, 2, rule_forced_solution_avoidance),
+    ("loop_avoidance_2", 5, 2, rule_loop_avoidance_2),
+    ("v_pattern_with_three", 6, 2, rule_v_pattern_with_three),
+    ("adjacent_ones", 8, 2, rule_adjacent_ones),
+    ("adjacent_threes", 8, 2, rule_adjacent_threes),
+    ("diagonal_ones", 8, 2, rule_diagonal_ones),
+    ("trial_clue_violation", 10, 3, rule_trial_clue_violation),
+    ("one_step_lookahead", 15, 3, rule_one_step_lookahead),
 ]
 
-# Rules safe for puzzle generation (excludes lookahead rules that do backtracking)
-# These rules should be human-solvable without trial-and-error
-RULES_GENERATION = [
-    ("corner_zero", 1, rule_corner_zero),
-    ("corner_four", 1, rule_corner_four),
-    ("clue_finish_b", 1, rule_clue_finish_b),
-    ("clue_finish_a", 2, rule_clue_finish_a),
-    ("no_loops", 2, rule_no_loops),
-    ("edge_clue_constraints", 2, rule_edge_clue_constraints),
-    ("border_two_v_shape", 3, rule_border_two_v_shape),
-    ("single_path_extension", 3, rule_single_path_extension),
-    ("forced_solution_avoidance", 5, rule_forced_solution_avoidance),
-    ("loop_avoidance_2", 5, rule_loop_avoidance_2),
-    ("v_pattern_with_three", 6, rule_v_pattern_with_three),
-    ("adjacent_ones", 8, rule_adjacent_ones),
-    ("adjacent_threes", 8, rule_adjacent_threes),
-    ("diagonal_ones", 8, rule_diagonal_ones),
-    # Exclude: trial_clue_violation, one_step_lookahead (these do backtracking)
-]
+# For puzzle generation, use max_tier=2 to exclude tier 3 backtracking rules
+# (trial_clue_violation, one_step_lookahead) which are not human-solvable
 
 
 def solve(givens_string, width=None, height=None, verbose=False,
-          known_solution=None, for_generation=False):
+          known_solution=None, for_generation=False, max_tier=10):
     """
     Solve a Slants puzzle using production rules.
 
@@ -78,6 +58,7 @@ def solve(givens_string, width=None, height=None, verbose=False,
         verbose: If True, print progress information
         known_solution: If provided, solver will detect incorrect moves
         for_generation: If True, use rules safe for puzzle generation
+        max_tier: Maximum rule tier to use (1, 2, or 3). Default 10 uses all rules.
 
     Returns:
         Tuple of (status, solution_string, work_score) where:
@@ -91,8 +72,12 @@ def solve(givens_string, width=None, height=None, verbose=False,
     # Create board
     board = Board(width, height, givens_string, known_solution=known_solution)
 
-    # Select rules
-    rules = RULES_GENERATION if for_generation else RULES
+    # For generation, cap max_tier at 2 to exclude backtracking rules
+    if for_generation:
+        max_tier = min(max_tier, 2)
+
+    # Filter rules by tier
+    rules = [(name, score, tier, func) for name, score, tier, func in RULES if tier <= max_tier]
 
     # Main solving loop
     max_iterations = 1000
@@ -114,7 +99,7 @@ def solve(givens_string, width=None, height=None, verbose=False,
 
         # Try each rule in order
         made_progress = False
-        for name, score, rule_func in rules:
+        for name, score, tier, rule_func in rules:
             try:
                 if rule_func(board):
                     total_work_score += score

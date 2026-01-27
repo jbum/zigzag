@@ -8,8 +8,6 @@ import time
 
 from slants_board import Board, SolverDebugError, UNKNOWN, SLASH, BACKSLASH
 from slants_rules import (
-    rule_corner_zero,
-    rule_corner_four,
     rule_clue_finish_a,
     rule_clue_finish_b,
     rule_no_loops,
@@ -26,29 +24,32 @@ from slants_rules import (
 
 
 # Rules used by BF solver (same as PR solver)
+# Format: (name, work_score, tier, rule_function)
+# Tier: 1 = score < 8, 2 = score >= 8 and < 10, 3 = score >= 10
 RULES = [
-    ("corner_zero", 1, rule_corner_zero),
-    ("corner_four", 1, rule_corner_four),
-    ("clue_finish_b", 1, rule_clue_finish_b),
-    ("clue_finish_a", 2, rule_clue_finish_a),
-    ("no_loops", 2, rule_no_loops),
-    ("edge_clue_constraints", 2, rule_edge_clue_constraints),
-    ("border_two_v_shape", 3, rule_border_two_v_shape),
-    ("single_path_extension", 3, rule_single_path_extension),
-    ("forced_solution_avoidance", 5, rule_forced_solution_avoidance),
-    ("loop_avoidance_2", 5, rule_loop_avoidance_2),
-    ("v_pattern_with_three", 6, rule_v_pattern_with_three),
-    ("adjacent_ones", 8, rule_adjacent_ones),
-    ("adjacent_threes", 8, rule_adjacent_threes),
-    ("diagonal_ones", 8, rule_diagonal_ones),
+    ("clue_finish_b", 1, 1, rule_clue_finish_b),
+    ("clue_finish_a", 2, 1, rule_clue_finish_a),
+    ("no_loops", 2, 1, rule_no_loops),
+    ("edge_clue_constraints", 2, 2, rule_edge_clue_constraints),
+    ("border_two_v_shape", 3, 2, rule_border_two_v_shape),
+    ("single_path_extension", 3, 2, rule_single_path_extension),
+    ("forced_solution_avoidance", 5, 2, rule_forced_solution_avoidance),
+    ("loop_avoidance_2", 5, 1, rule_loop_avoidance_2),
+    ("v_pattern_with_three", 6, 2, rule_v_pattern_with_three),
+    ("adjacent_ones", 8, 2, rule_adjacent_ones),
+    ("adjacent_threes", 8, 2, rule_adjacent_threes),
+    ("diagonal_ones", 8, 2, rule_diagonal_ones),
 ]
 
 
-def apply_rules_until_stuck(board, debug=False):
+def apply_rules_until_stuck(board, debug=False, rules=None):
     """
     Apply rules repeatedly until no more progress can be made.
     Returns the total work score.
     """
+    if rules is None:
+        rules = RULES
+
     total_work_score = 0
     max_iterations = 1000
     iteration = 0
@@ -70,7 +71,7 @@ def apply_rules_until_stuck(board, debug=False):
 
         # Try each rule in order
         made_progress = False
-        for name, score, rule_func in RULES:
+        for name, score, tier, rule_func in rules:
             try:
                 if rule_func(board):
                     total_work_score += score
@@ -191,7 +192,7 @@ def get_valid_values(board, cell):
 
 
 def solve(givens_string, width=None, height=None, verbose=False, known_solution=None,
-          for_generation=False):
+          for_generation=False, max_tier=10):
     """
     Solve a Slants puzzle using brute-force backtracking.
 
@@ -202,6 +203,7 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
         verbose: If True, print progress information
         known_solution: If provided, solver will detect incorrect moves during initial rule application
         for_generation: Ignored by BF solver (included for API compatibility)
+        max_tier: Maximum rule tier to use (1, 2, or 3). Default 10 uses all rules.
 
     Returns:
         Tuple of (status, solution_string, work_score) where:
@@ -214,6 +216,9 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
 
     # Create board
     board = Board(width, height, givens_string, known_solution=known_solution)
+
+    # Filter rules by tier
+    filtered_rules = [(name, score, tier, func) for name, score, tier, func in RULES if tier <= max_tier]
 
     debug = verbose
 
@@ -251,7 +256,7 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
 
         # Apply rules
         try:
-            work_score = apply_rules_until_stuck(board, debug=debug and search_depth < 3)
+            work_score = apply_rules_until_stuck(board, debug=debug and search_depth < 3, rules=filtered_rules)
             total_work_score += work_score
         except SolverDebugError as e:
             if debug:

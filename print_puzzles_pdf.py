@@ -146,6 +146,30 @@ def draw_puzzle(canv, puzzle_data, available_width, available_height, ox, oy, sh
     num_vertices = (width + 1) * (height + 1)
     vertex_clues = decode_givens(givens, num_vertices)
 
+    # Draw solution diagonals first (if showing answer) so givens appear on top
+    if show_answer and solution:
+        diagonal_line_width = cell_width * 0.04  # 4% of cell width
+        canv.setLineWidth(diagonal_line_width)
+        canv.setStrokeGray(0)
+
+        for y in range(height):
+            for x in range(width):
+                idx = y * width + x
+                if idx < len(solution):
+                    char = solution[idx]
+                    # Cell corners
+                    left = puzzle_ox + x * cell_width
+                    right = puzzle_ox + (x + 1) * cell_width
+                    top = puzzle_oy - y * cell_height
+                    bottom = puzzle_oy - (y + 1) * cell_height
+
+                    if char == '/':
+                        # Slash: bottom-left to top-right
+                        canv.line(left, bottom, right, top)
+                    elif char == '\\':
+                        # Backslash: top-left to bottom-right
+                        canv.line(left, top, right, bottom)
+
     # Draw vertex clues (at intersections) with circles behind them
     font_size = cell_width * 0.42  # Slightly larger font
     circle_radius = font_size * 0.7  # Circle radius slightly larger than font
@@ -170,30 +194,6 @@ def draw_puzzle(canv, puzzle_data, available_width, available_height, ox, oy, sh
                 canv.setFont('Helvetica-Bold', font_size)
                 canv.setFillGray(0)  # Black text
                 canv.drawCentredString(cx, cy - font_size * 0.35, str(clue))
-
-    # Draw solution diagonals if showing answer
-    if show_answer and solution:
-        diagonal_line_width = cell_width * 0.04  # 4% of cell width
-        canv.setLineWidth(diagonal_line_width)
-        canv.setStrokeGray(0)
-
-        for y in range(height):
-            for x in range(width):
-                idx = y * width + x
-                if idx < len(solution):
-                    char = solution[idx]
-                    # Cell corners
-                    left = puzzle_ox + x * cell_width
-                    right = puzzle_ox + (x + 1) * cell_width
-                    top = puzzle_oy - y * cell_height
-                    bottom = puzzle_oy - (y + 1) * cell_height
-
-                    if char == '/':
-                        # Slash: bottom-left to top-right
-                        canv.line(left, bottom, right, top)
-                    elif char == '\\':
-                        # Backslash: top-left to bottom-right
-                        canv.line(left, top, right, bottom)
 
     # Return the top y coordinate including circle overhang for positioning labels
     # Add circle_radius (for top-left corner circle) plus padding
@@ -330,7 +330,7 @@ def main():
         # Title
         c.setFont('Helvetica-Bold', 18)
         c.setFillGray(0)
-        c.drawCentredString(page_width / 2, title_y, 'Slants Puzzles')
+        c.drawCentredString(page_width / 2, title_y, 'Zigzag Puzzles')
 
         # Calculate puzzle area height based on available space
         puzzle_area_height = total_puzzle_space / puzzles_down * 0.9
@@ -385,7 +385,7 @@ def main():
         # Title
         c.setFont('Helvetica-Bold', 18)
         c.setFillGray(0)
-        c.drawCentredString(page_width / 2, title_y, 'Slants Answers')
+        c.drawCentredString(page_width / 2, title_y, 'Zigzag Answers')
 
         # Calculate answer area height based on available space
         answer_area_height = total_puzzle_space / answers_down * 0.9

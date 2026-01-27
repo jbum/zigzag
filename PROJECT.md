@@ -16,9 +16,9 @@ The puzzle and answer depicted in sample_puzzle.png are given by
 
 puzzle-1    5   5   g4b12b12a31113b113a12g  \//\\/\\\\\\\/\\/\\\\\\//   # givens=15
 
-Here is the plan for making this software:
+Here is the plan for making this software.  Make a PROGRESS.md file to track our progress through these steps.
 
-1. Procure a couple test suites of puzzles.  We will procure our puzzles from these two sites, https://www.puzzle-slant.com/, and https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/slant.html and save them in ./testsuites/PS_testsuite.txt and testsuites/SGT_testsuite.txt, respectively.  Suggestions for scraping the sites are in SCRAPING.md. We will want 10 of each size/difficulty puzzle offered by each site.  Initially our testsuites won’t have answers, but we will supply them later.  This step can be done in parallel by a seperate agent, since the test suites won’t be needed til step 6.
+1. Procure a couple test suites of puzzles.  We will procure our puzzles from these two sites, https://www.puzzle-slant.com/, and https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/slant.html and save them in ./testsuites/PS_testsuite.txt and testsuites/SGT_testsuite.txt, respectively.  Suggestions for scraping the sites are in SCRAPING.md. We will want 10 of each size/difficulty puzzle offered by each site.  Initially our testsuites won’t have answers, but we will supply them later.  This can be done in parallel with the following steps.  The resultant test suites aren't needed til step 9.
 
 2. Implement a representation class of the board and its cells and vertices for use in solvers. For vertices we need to know its given if it has one. For cells they either have the value UNKNOWN (0), SLASH (1) or BACKSLASH (2).
 
@@ -50,15 +50,15 @@ options:
 
   This script loops thru the testsuite and attempts to solve all the puzzles, and reports on the results.
 
-9. Let’s debug the brute force solver using our test suites and solve_puzzles.py. It needs to be able to solve them 100%.
+9. Wait for test suites to become avaiable if they are being generated in another thread. Then let’s debug the brute force solver using our test suites and solve_puzzles.py. It needs to be able to solve most of them.  Some of the test suites may contain large puzzles (15x15 or larger) which take too long to solve. We can ignore those.
 
-10. Use the brute force solver and solving harness to obtain answers for the test suites.  Add the answers to the test suites.
+10. Use the brute force solver and solving harness to obtain answers for the test suites (for puzzles which are tractible).  Add the answers to the test suites.
 
 11. Modify the PR solver (and solve_puzzles.py) to detect, when the answer is known, when we make an inaccurate move as we solve the puzzle.  If we do, the solver is bugged, and we should debug rules which make false moves.  We should output warning messages when this happens.
 
 12. Get a baseline for how the PR solver is doing on the test suites. Debug any current issues detected using the solving harness.  From here on out, keep a history of our progress on the test suites with this solver, summarizing what changes were made, and the elapsed times and solve% on each test suite.
 
-13. If the PR solver isn’t solving the majority of the test puzzles, continue working on improving the ruleset.
+13. If the PR solver isn’t solving the majority of the test puzzles, continue working on improving the ruleset until it solving the majority of the test puzzles without using trial and error or no more than 1-level of lookahead.
 
 14. Assign work scores to the rules which are proportional to their complexity. Make each solver return a cumulative work score for the puzzle.  For the BF puzzle, stack pushes/pops should also contribute a good bit to the score.
 
@@ -105,5 +105,5 @@ options:
 
 21. Make a script print_puzzles_pdf.pl which produced PDFs of puzzles with answer pages.  Mimic the print_puzzles_pdf.py scripts in reference dir: ./sample_finished_puzzle/ (a symbolic link to a parallel directory).  That script uses some support files you should copy over (assets/ etc)
 
-22. Print a PDF for each of the puzzledata collections, 4 puzzles per page w answers.  Store them in ./pdfs/
+22. Print a PDF for each of the puzzledata collections, 4 puzzles per page w answers.  Store them in ./pdfs/.  The printed digits at the vertices should be a little oversized (font-height at least half the cell height). They should have circles behind them with white fills and black outlines.  Use sample_puzzle.png for a visual reference.  Also, the circles extend past the grid's area and contribute to the puzzle's size. Don't let the circles extend out of the puzzle's quadrant, or overlap the puzzle#.
 

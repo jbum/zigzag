@@ -58,6 +58,8 @@ def main():
     parser.add_argument('-s', '--solver', type=str, default='PR',
                         choices=['PR', 'BF'],
                         help='Solver to use: PR (production rules) or BF (brute force)')
+    parser.add_argument('-mt', '--max_tier', type=int, default=10,
+                        help='Maximum rule tier to use (1, 2, or 3). Default 10 uses all rules.')
     parser.add_argument('-ou', '--output_unsolved', action='store_true',
                         help='Output list of unsolved puzzles (sorted by size)')
 
@@ -126,7 +128,8 @@ def main():
             width=puzzle['width'],
             height=puzzle['height'],
             verbose=args.debug,
-            known_solution=puzzle['answer'] if puzzle['answer'] else None
+            known_solution=puzzle['answer'] if puzzle['answer'] else None,
+            max_tier=args.max_tier
         )
 
         # Count unsolved squares
@@ -186,6 +189,8 @@ def main():
     if not args.verbose:
         print(f"\nInput file: {args.input_file}")
         print(f"Solver: {args.solver}")
+        if args.max_tier < 10:
+            print(f"Max tier: {args.max_tier}")
         print(f"Puzzles tested: {total_puzzles}")
         print(f"Solved: {solved_count} ({solved_pct:.1f}%)")
         if mult_count > 0:
