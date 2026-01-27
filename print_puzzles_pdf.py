@@ -82,7 +82,7 @@ def draw_puzzle(canv, puzzle_data, available_width, available_height, ox, oy, sh
         show_answer: If True, show solution; otherwise show only givens
 
     Returns:
-        The y coordinate of the top of the grid (for positioning labels above it)
+        Dict with 'top_y', 'left_x', 'center_y' for positioning labels
     """
     width = puzzle_data['width']
     height = puzzle_data['height']
@@ -195,10 +195,13 @@ def draw_puzzle(canv, puzzle_data, available_width, available_height, ox, oy, sh
                 canv.setFillGray(0)  # Black text
                 canv.drawCentredString(cx, cy - font_size * 0.35, str(clue))
 
-    # Return the top y coordinate including circle overhang for positioning labels
-    # Add circle_radius (for top-left corner circle) plus padding
+    # Return position info for label placement
     circle_radius = cell_size * circle_overhang_factor
-    return puzzle_oy + circle_radius + 4  # 4 points extra padding
+    return {
+        'top_y': puzzle_oy + circle_radius + 4,  # 4 points extra padding
+        'left_x': puzzle_ox - circle_radius,  # Left edge including circle overhang
+        'center_y': puzzle_oy - puzzle_height / 2,  # Vertical center of grid
+    }
 
 
 def main():
@@ -277,13 +280,13 @@ def main():
     puzzles_per_page = args.puzzles_per_page
     answers_per_page = args.answers_per_page
 
-    # For puzzles: arrange in a grid
+    # For puzzles: arrange in a grid (prefer more rows for portrait orientation)
     import math
-    puzzles_across = int(math.ceil(math.sqrt(puzzles_per_page)))
+    puzzles_across = max(1, int(math.floor(math.sqrt(puzzles_per_page))))
     puzzles_down = int(math.ceil(puzzles_per_page / puzzles_across))
 
-    # For answers: arrange in a grid
-    answers_across = int(math.ceil(math.sqrt(answers_per_page)))
+    # For answers: arrange in a grid (prefer more rows for portrait orientation)
+    answers_across = max(1, int(math.floor(math.sqrt(answers_per_page))))
     answers_down = int(math.ceil(answers_per_page / answers_across))
 
     # Available space on page
@@ -293,14 +296,14 @@ def main():
     title_y = page_height - margin - logo_height - 10  # Title baseline
     logo_top = margin + logo_height  # Approximate bottom of logo area
     puzzle_space_top = title_y - title_bottom_spacing  # Top of puzzle area
-    puzzle_space_bottom = logo_top + margin  # Bottom of puzzle area
+    puzzle_space_bottom = logo_top + 0.25 * inch  # Bottom of puzzle area (1/4 inch above logo)
 
     # Total vertical space available for puzzles (between title and logo)
     total_puzzle_space = puzzle_space_top - puzzle_space_bottom
 
     # Calculate puzzle/answer area sizes (these will be adjusted for centering)
     puzzle_area_width = (total_available_width / puzzles_across) * 0.9  # 90% of space, with gaps
-    answer_area_width = (total_available_width / answers_across) * 0.9
+    answer_area_width = (total_available_width / answers_across) * 0.72  # 72% for answers (smaller)
 
     # Instructions text for Slants
     instructions_text = ("Fill each cell with a diagonal line (/ or \\). "
@@ -352,12 +355,12 @@ def main():
                 py = grid_start_y - gy * puzzle_area_height
 
                 # Draw puzzle
-                grid_top_y = draw_puzzle(c, puzzle, puzzle_area_width, puzzle_area_height, px, py, show_answer=False)
+                grid_pos = draw_puzzle(c, puzzle, puzzle_area_width, puzzle_area_height, px, py, show_answer=False)
 
                 # Puzzle number
                 original_puzzle_num = start_idx + puzzle_idx + 1
                 c.setFont('Helvetica', 10)
-                c.drawString(px, grid_top_y + 2, f"#{original_puzzle_num}")
+                c.drawString(px, grid_pos['top_y'] + 2, f"#{original_puzzle_num}")
 
                 puzzle_idx += 1
 
@@ -387,13 +390,19 @@ def main():
         c.setFillGray(0)
         c.drawCentredString(page_width / 2, title_y, 'Zigzag Answers')
 
-        # Calculate answer area height based on available space
-        answer_area_height = total_puzzle_space / answers_down * 0.9
+        # Answers vertical space - 0.25" inside the puzzle space at top and bottom
+        answer_space_top = puzzle_space_top - 0.25 * inch
+        answer_space_bottom = puzzle_space_bottom + 0.25 * inch
+        total_answer_space = answer_space_top - answer_space_bottom
 
-        # Calculate starting y position to center the answer grid
-        total_grid_height = answer_area_height * answers_down
-        extra_space = total_puzzle_space - total_grid_height
-        grid_start_y = puzzle_space_top - extra_space / 2
+        # Cell size for spacing (full size) vs drawing area (reduced)
+        answer_cell_width = total_available_width / answers_across
+        answer_cell_height = total_answer_space / answers_down
+        answer_draw_width = answer_cell_width * 0.86  # 86% for drawing (~1.2x of 72%)
+        answer_draw_height = answer_cell_height * 0.86
+
+        # Start from top of answer space
+        grid_start_y = answer_space_top
 
         # Draw answers in grid
         for gy in range(answers_down):
@@ -406,17 +415,17 @@ def main():
                     answer_idx += 1
                     continue
 
-                # Calculate position of answer area (top-left corner)
-                px = margin + gx * (total_available_width / answers_across) + (total_available_width / answers_across - answer_area_width) / 2
-                py = grid_start_y - gy * answer_area_height
+                # Calculate position of answer area (top-left corner), centered in cell
+                px = margin + gx * answer_cell_width + (answer_cell_width - answer_draw_width) / 2
+                py = grid_start_y - gy * answer_cell_height - (answer_cell_height - answer_draw_height) / 2
 
                 # Draw answer
-                grid_top_y = draw_puzzle(c, puzzle, answer_area_width, answer_area_height, px, py, show_answer=True)
+                grid_pos = draw_puzzle(c, puzzle, answer_draw_width, answer_draw_height, px, py, show_answer=True)
 
-                # Answer number
+                # Answer number (to the left of the puzzle, top-aligned)
                 original_answer_num = start_idx + answer_idx + 1
                 c.setFont('Helvetica', 10)
-                c.drawString(px, grid_top_y + 2, f"#{original_answer_num}")
+                c.drawRightString(grid_pos['left_x'] - 4, grid_pos['top_y'] - 10, f"#{original_answer_num}")
 
                 answer_idx += 1
 

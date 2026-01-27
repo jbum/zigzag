@@ -228,9 +228,9 @@ def reduce_clues(width, height, clues, solution, solve_func, rng, symmetry=False
         # Test if still solvable
         givens = encode_clues(clues)
         try:
-            status, result, _ = solve_func(givens, width, height,
-                                           known_solution=solution,
-                                           for_generation=True)
+            status, result, _, _ = solve_func(givens, width, height,
+                                              known_solution=solution,
+                                              for_generation=True)
             if status == "solved" and result == solution:
                 # Can remove this clue
                 if verbose:
@@ -253,7 +253,7 @@ def generate_puzzle(width, height, solve_func, rng, reduction_passes=3,
     Generate a single puzzle.
 
     Returns:
-        Tuple of (givens_string, solution_string, work_score, num_clues) or None if failed
+        Tuple of (givens_string, solution_string, work_score, num_clues, max_tier) or None if failed
     """
     # Generate random solution
     solution_list = generate_random_solution(width, height, rng)
@@ -268,9 +268,9 @@ def generate_puzzle(width, height, solve_func, rng, reduction_passes=3,
     # Verify puzzle is solvable with all clues
     givens = encode_clues(all_clues)
     try:
-        status, result, work_score = solve_func(givens, width, height,
-                                                 known_solution=solution_string,
-                                                 for_generation=True)
+        status, result, work_score, max_tier = solve_func(givens, width, height,
+                                                           known_solution=solution_string,
+                                                           for_generation=True)
         if status != "solved":
             if verbose:
                 print(f"  Warning: generated puzzle not solvable with all clues")
@@ -296,15 +296,15 @@ def generate_puzzle(width, height, solve_func, rng, reduction_passes=3,
 
     # Final verification
     givens = encode_clues(best_clues)
-    status, result, work_score = solve_func(givens, width, height,
-                                            known_solution=solution_string,
-                                            for_generation=True)
+    status, result, work_score, max_tier = solve_func(givens, width, height,
+                                                       known_solution=solution_string,
+                                                       for_generation=True)
     if status != "solved" or result != solution_string:
         if verbose:
             print(f"  Warning: reduced puzzle verification failed")
         return None
 
-    return givens, solution_string, work_score, best_count
+    return givens, solution_string, work_score, best_count, max_tier
 
 
 def main():
@@ -366,18 +366,18 @@ def main():
             )
 
             if result is not None:
-                givens, solution, work_score, num_clues = result
-                puzzles.append((givens, solution, work_score, num_clues))
+                givens, solution, work_score, num_clues, max_tier = result
+                puzzles.append((givens, solution, work_score, num_clues, max_tier))
                 total_clues += num_clues
 
                 if args.output_file is None:
                     # Print to stdout immediately
                     name = f"gen_{args.width}x{args.height}_{i + 1}"
-                    comment = f"# givens={num_clues} work_score={work_score}"
+                    comment = f"# givens={num_clues} work_score={work_score} tier={max_tier}"
                     print(f"{name}\t{args.width}\t{args.height}\t{givens}\t{solution}\t{comment}")
 
                 if args.verbose:
-                    print(f"  Generated: {num_clues} clues, work_score={work_score}", file=sys.stderr)
+                    print(f"  Generated: {num_clues} clues, work_score={work_score}, tier={max_tier}", file=sys.stderr)
                 break
 
             retries += 1
@@ -403,9 +403,9 @@ def main():
                 f.write(f"# Average clues: {avg_clues:.1f}\n")
             f.write("\n")
 
-            for i, (givens, solution, work_score, num_clues) in enumerate(puzzles):
+            for i, (givens, solution, work_score, num_clues, max_tier) in enumerate(puzzles):
                 name = f"gen_{args.width}x{args.height}_{i + 1}"
-                comment = f"# givens={num_clues} work_score={work_score}"
+                comment = f"# givens={num_clues} work_score={work_score} tier={max_tier}"
                 f.write(f"{name}\t{args.width}\t{args.height}\t{givens}\t{solution}\t{comment}\n")
 
         print(f"\nWrote {len(puzzles)} puzzles to {args.output_file}", file=sys.stderr)

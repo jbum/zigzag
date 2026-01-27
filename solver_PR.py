@@ -61,10 +61,11 @@ def solve(givens_string, width=None, height=None, verbose=False,
         max_tier: Maximum rule tier to use (1, 2, or 3). Default 10 uses all rules.
 
     Returns:
-        Tuple of (status, solution_string, work_score) where:
+        Tuple of (status, solution_string, work_score, max_tier_used) where:
         - status is "solved" or "unsolved"
         - solution_string is the board state (/ and \\ characters, . for unknown)
         - work_score is cumulative score of all rules applied
+        - max_tier_used is the highest tier of any rule that made progress
     """
     if width is None or height is None:
         raise ValueError("Width and height must be specified for Slants puzzles")
@@ -84,6 +85,7 @@ def solve(givens_string, width=None, height=None, verbose=False,
     iteration = 0
     status = None
     total_work_score = 0
+    max_tier_used = 0
     debug_error = None
 
     while iteration < max_iterations:
@@ -103,9 +105,10 @@ def solve(givens_string, width=None, height=None, verbose=False,
             try:
                 if rule_func(board):
                     total_work_score += score
+                    max_tier_used = max(max_tier_used, tier)
                     made_progress = True
                     if verbose:
-                        print(f"  Rule '{name}' made progress (iteration {iteration})")
+                        print(f"  Rule '{name}' (tier {tier}) made progress (iteration {iteration})")
                     break  # Restart from first rule after progress
             except SolverDebugError as e:
                 debug_error = f"Rule '{name}' made incorrect move: {e}"
@@ -145,7 +148,7 @@ def solve(givens_string, width=None, height=None, verbose=False,
         total_cells = len(board.cells)
         print(f"Cells: {total_cells - unknown_count}/{total_cells} solved")
 
-    return status, solution_string, total_work_score
+    return status, solution_string, total_work_score, max_tier_used
 
 
 if __name__ == "__main__":
@@ -170,12 +173,13 @@ if __name__ == "__main__":
         print(f"Givens: {givens}")
         print()
 
-    status, solution, work_score = solve(givens, width, height, verbose=True)
+    status, solution, work_score, max_tier = solve(givens, width, height, verbose=True)
 
     print()
     print("=" * 50)
     print(f"Status: {status}")
     print(f"Work score: {work_score}")
+    print(f"Max tier used: {max_tier}")
 
     if status == "solved":
         print("\nSUCCESS - Puzzle solved!")

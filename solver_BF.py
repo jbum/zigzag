@@ -45,12 +45,13 @@ RULES = [
 def apply_rules_until_stuck(board, debug=False, rules=None):
     """
     Apply rules repeatedly until no more progress can be made.
-    Returns the total work score.
+    Returns tuple of (total_work_score, max_tier_used).
     """
     if rules is None:
         rules = RULES
 
     total_work_score = 0
+    max_tier_used = 0
     max_iterations = 1000
     iteration = 0
 
@@ -75,9 +76,10 @@ def apply_rules_until_stuck(board, debug=False, rules=None):
             try:
                 if rule_func(board):
                     total_work_score += score
+                    max_tier_used = max(max_tier_used, tier)
                     made_progress = True
                     if debug:
-                        print(f"  [Rules] Applied {name} (score={score}, iteration={iteration})")
+                        print(f"  [Rules] Applied {name} (tier={tier}, score={score}, iteration={iteration})")
                     break
             except SolverDebugError as e:
                 if debug:
@@ -94,7 +96,7 @@ def apply_rules_until_stuck(board, debug=False, rules=None):
                 print(f"  [Rules] Stuck at iteration {iteration}")
             break
 
-    return total_work_score
+    return total_work_score, max_tier_used
 
 
 def pick_best_cell(board):
@@ -206,10 +208,11 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
         max_tier: Maximum rule tier to use (1, 2, or 3). Default 10 uses all rules.
 
     Returns:
-        Tuple of (status, solution_string, work_score) where:
+        Tuple of (status, solution_string, work_score, max_tier_used) where:
         - status is "solved", "unsolved", or "mult"
         - solution_string is the board state
         - work_score is cumulative score
+        - max_tier_used is the highest tier used (3 if any backtracking/branching occurred)
     """
     if width is None or height is None:
         raise ValueError("Width and height must be specified for Slants puzzles")
@@ -235,6 +238,8 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
     solutions = []
     stack = [(board.save_state(), None)]  # (state, eliminated_choice)
     total_work_score = 0
+    max_tier_used = 0
+    used_branching = False  # Track if we ever branch (push to stack)
     search_depth = 0
     max_depth = 0
     backtrack_count = 0
@@ -256,13 +261,14 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
 
         # Apply rules
         try:
-            work_score = apply_rules_until_stuck(board, debug=debug and search_depth < 3, rules=filtered_rules)
+            work_score, tier_used = apply_rules_until_stuck(board, debug=debug and search_depth < 3, rules=filtered_rules)
             total_work_score += work_score
+            max_tier_used = max(max_tier_used, tier_used)
         except SolverDebugError as e:
             if debug:
                 print(f"\n*** DEBUG ERROR during solve ***")
                 print(str(e))
-            return "unsolved", board.to_solution_string(), 0
+            return "unsolved", board.to_solution_string(), 0, 0
         except ValueError:
             # Loop error during rule application
             backtrack_count += 1
@@ -320,6 +326,7 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
                 board.place_value(cell, value)
                 stack.append((board.save_state(), value))
                 push_pop_score += 1  # Count push
+                used_branching = True  # Mark that we used backtracking
             except ValueError:
                 # Would form loop - skip
                 pass
@@ -342,6 +349,10 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
     # Add push/pop score to total (weighted)
     total_work_score += push_pop_score * 2
 
+    # If we used branching (backtracking), promote to tier 3
+    if used_branching:
+        max_tier_used = 3
+
     elapsed_time = time.time() - start_time
 
     if debug:
@@ -355,6 +366,7 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
         print(f"  Backtracks: {backtrack_count}")
         print(f"  Push/pop operations: {push_pop_score}")
         print(f"  Total work score: {total_work_score}")
+        print(f"  Max tier used: {max_tier_used}")
         print(f"{'='*60}\n")
 
     if verbose:
@@ -363,7 +375,7 @@ def solve(givens_string, width=None, height=None, verbose=False, known_solution=
         print()
         print(f"Solution string: {solution_string}")
 
-    return status, solution_string, total_work_score
+    return status, solution_string, total_work_score, max_tier_used
 
 
 if __name__ == "__main__":
@@ -386,12 +398,13 @@ if __name__ == "__main__":
         print(f"Givens: {givens}")
         print()
 
-    status, solution, work_score = solve(givens, width, height, verbose=True)
+    status, solution, work_score, max_tier = solve(givens, width, height, verbose=True)
 
     print()
     print("=" * 50)
     print(f"Status: {status}")
     print(f"Work score: {work_score}")
+    print(f"Max tier used: {max_tier}")
 
     if status == "solved":
         print("\nSUCCESS - Puzzle solved!")

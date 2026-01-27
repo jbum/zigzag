@@ -123,7 +123,7 @@ def main():
             print(f"Givens: {puzzle['givens']}")
             print(f"{'='*60}")
 
-        status, solution_or_partial, work_score = solve(
+        status, solution_or_partial, work_score, max_tier_used = solve(
             puzzle['givens'],
             width=puzzle['width'],
             height=puzzle['height'],
