@@ -182,7 +182,7 @@ def solution_to_string(solution):
     return ''.join(chars)
 
 
-def reduce_clues(width, height, clues, solution, solve_func, rng, symmetry=False, verbose=False):
+def reduce_clues(width, height, clues, solution, solve_func, rng, symmetry=False, verbose=False, max_tier=2):
     """
     Reduce clues while maintaining unique solvability.
 
@@ -194,6 +194,7 @@ def reduce_clues(width, height, clues, solution, solve_func, rng, symmetry=False
         rng: Random number generator
         symmetry: If True, remove clues in symmetric pairs
         verbose: Print progress
+        max_tier: Maximum rule tier to use during reduction (1 or 2)
 
     Returns:
         Number of remaining clues
@@ -230,7 +231,8 @@ def reduce_clues(width, height, clues, solution, solve_func, rng, symmetry=False
         try:
             status, result, _, _ = solve_func(givens, width, height,
                                               known_solution=solution,
-                                              for_generation=True)
+                                              for_generation=True,
+                                              max_tier=max_tier)
             if status == "solved" and result == solution:
                 # Can remove this clue
                 if verbose:
@@ -248,9 +250,21 @@ def reduce_clues(width, height, clues, solution, solve_func, rng, symmetry=False
 
 
 def generate_puzzle(width, height, solve_func, rng, reduction_passes=3,
-                    symmetry=False, verbose=False, very_verbose=False):
+                    symmetry=False, verbose=False, very_verbose=False,
+                    target_tier=None, min_tier=1, max_tier=2):
     """
     Generate a single puzzle.
+
+    Args:
+        width, height: Puzzle dimensions
+        solve_func: Solver function
+        rng: Random number generator
+        reduction_passes: Number of clue reduction passes
+        symmetry: Use symmetric clue reduction
+        verbose, very_verbose: Output verbosity
+        target_tier: Target difficulty tier (1 or 2), or None for any
+        min_tier: Minimum acceptable tier for the result
+        max_tier: Maximum tier to use during reduction
 
     Returns:
         Tuple of (givens_string, solution_string, work_score, num_clues, max_tier) or None if failed
@@ -268,9 +282,10 @@ def generate_puzzle(width, height, solve_func, rng, reduction_passes=3,
     # Verify puzzle is solvable with all clues
     givens = encode_clues(all_clues)
     try:
-        status, result, work_score, max_tier = solve_func(givens, width, height,
-                                                           known_solution=solution_string,
-                                                           for_generation=True)
+        status, result, work_score, result_tier = solve_func(givens, width, height,
+                                                              known_solution=solution_string,
+                                                              for_generation=True,
+                                                              max_tier=max_tier)
         if status != "solved":
             if verbose:
                 print(f"  Warning: generated puzzle not solvable with all clues")
@@ -280,31 +295,38 @@ def generate_puzzle(width, height, solve_func, rng, reduction_passes=3,
             print(f"  Error testing initial puzzle: {e}")
         return None
 
-    # Reduce clues
+    # Reduce clues using the specified max_tier
     best_clues = all_clues.copy()
     best_count = sum(1 for c in best_clues if c is not None)
 
     for pass_num in range(reduction_passes):
         clues = [c for c in all_clues]  # Fresh copy from all clues
         count = reduce_clues(width, height, clues, solution_string, solve_func, rng,
-                            symmetry=symmetry, verbose=very_verbose)
+                            symmetry=symmetry, verbose=very_verbose, max_tier=max_tier)
         if count < best_count:
             best_clues = clues
             best_count = count
             if verbose:
                 print(f"  Pass {pass_num + 1}: reduced to {count} clues")
 
-    # Final verification
+    # Final verification - always use tier 2 to get accurate tier classification
     givens = encode_clues(best_clues)
-    status, result, work_score, max_tier = solve_func(givens, width, height,
-                                                       known_solution=solution_string,
-                                                       for_generation=True)
+    status, result, work_score, result_tier = solve_func(givens, width, height,
+                                                          known_solution=solution_string,
+                                                          for_generation=True,
+                                                          max_tier=2)
     if status != "solved" or result != solution_string:
         if verbose:
             print(f"  Warning: reduced puzzle verification failed")
         return None
 
-    return givens, solution_string, work_score, best_count, max_tier
+    # Check if result tier matches requirements
+    if result_tier < min_tier:
+        if verbose:
+            print(f"  Rejecting: tier {result_tier} < min_tier {min_tier}")
+        return None
+
+    return givens, solution_string, work_score, best_count, result_tier
 
 
 def main():
@@ -329,8 +351,20 @@ def main():
                         help='Output file (default: stdout)')
     parser.add_argument('-sym', '--symmetry', action='store_true',
                         help='Enable symmetry for clue reduction')
+    parser.add_argument('-mingt', '--min_gen_tier', type=int, default=1,
+                        help='Minimum generated tier (default: 1)')
+    parser.add_argument('-maxgt', '--max_gen_tier', type=int, default=2,
+                        help='Maximum generated tier (default: 2)')
 
     args = parser.parse_args()
+
+    # Validate tier arguments
+    if args.min_gen_tier < 1 or args.min_gen_tier > 2:
+        parser.error("min_gen_tier must be 1 or 2")
+    if args.max_gen_tier < 1 or args.max_gen_tier > 2:
+        parser.error("max_gen_tier must be 1 or 2")
+    if args.min_gen_tier > args.max_gen_tier:
+        parser.error("min_gen_tier cannot be greater than max_gen_tier")
 
     if args.very_verbose:
         args.verbose = True
@@ -346,13 +380,31 @@ def main():
     puzzles = []
     retries = 0
     total_clues = 0
+    tier_counts = {1: 0, 2: 0}
 
     print(f"# Generating {args.number} puzzles ({args.width}x{args.height})", file=sys.stderr)
     print(f"# Solver: {args.solver}, Seed: {args.random_seed}, Reduction passes: {args.reduction_passes}", file=sys.stderr)
+    if args.min_gen_tier != 1 or args.max_gen_tier != 2:
+        print(f"# Tier range: {args.min_gen_tier}-{args.max_gen_tier}", file=sys.stderr)
 
     for i in range(args.number):
         if args.verbose:
             print(f"\nGenerating puzzle {i + 1}/{args.number}...", file=sys.stderr)
+
+        # Determine target tier for this puzzle
+        if args.min_gen_tier == args.max_gen_tier:
+            # Fixed tier - always generate at this tier
+            target_tier = args.min_gen_tier
+            reduction_max_tier = args.max_gen_tier
+            min_tier = args.min_gen_tier
+        else:
+            # Tier range - balance between tiers
+            # Choose target to balance counts (want roughly 50/50)
+            target_tier = 2 if tier_counts[1] > tier_counts[2] else 1
+            # For tier 1: use only tier 1 rules during reduction
+            # For tier 2: use tier 2 rules, but reject if result is tier 1
+            reduction_max_tier = target_tier
+            min_tier = target_tier
 
         attempt = 0
         while True:
@@ -362,22 +414,26 @@ def main():
                 reduction_passes=args.reduction_passes,
                 symmetry=args.symmetry,
                 verbose=args.verbose,
-                very_verbose=args.very_verbose
+                very_verbose=args.very_verbose,
+                target_tier=target_tier,
+                min_tier=min_tier,
+                max_tier=reduction_max_tier
             )
 
             if result is not None:
-                givens, solution, work_score, num_clues, max_tier = result
-                puzzles.append((givens, solution, work_score, num_clues, max_tier))
+                givens, solution, work_score, num_clues, result_tier = result
+                puzzles.append((givens, solution, work_score, num_clues, result_tier))
                 total_clues += num_clues
+                tier_counts[result_tier] += 1
 
                 if args.output_file is None:
                     # Print to stdout immediately
                     name = f"gen_{args.width}x{args.height}_{i + 1}"
-                    comment = f"# givens={num_clues} work_score={work_score} tier={max_tier}"
+                    comment = f"# givens={num_clues} work_score={work_score} tier={result_tier}"
                     print(f"{name}\t{args.width}\t{args.height}\t{givens}\t{solution}\t{comment}")
 
                 if args.verbose:
-                    print(f"  Generated: {num_clues} clues, work_score={work_score}, tier={max_tier}", file=sys.stderr)
+                    print(f"  Generated: {num_clues} clues, work_score={work_score}, tier={result_tier}", file=sys.stderr)
                 break
 
             retries += 1
@@ -386,6 +442,9 @@ def main():
                 break
 
     elapsed = time.time() - start_time
+
+    # Build tier distribution string
+    tier_dist = f"Tier 1: {tier_counts[1]}, Tier 2: {tier_counts[2]}"
 
     # Output to file if specified
     if args.output_file:
@@ -398,14 +457,15 @@ def main():
             f.write(f"# Size: {args.width}x{args.height}, Count: {len(puzzles)}\n")
             f.write(f"# Solver: {args.solver}, Seed: {args.random_seed}\n")
             f.write(f"# Elapsed: {elapsed:.2f}s, Retries: {retries}\n")
+            f.write(f"# Tiers: {tier_dist}\n")
             if puzzles:
                 avg_clues = total_clues / len(puzzles)
                 f.write(f"# Average clues: {avg_clues:.1f}\n")
             f.write("\n")
 
-            for i, (givens, solution, work_score, num_clues, max_tier) in enumerate(puzzles):
+            for i, (givens, solution, work_score, num_clues, result_tier) in enumerate(puzzles):
                 name = f"gen_{args.width}x{args.height}_{i + 1}"
-                comment = f"# givens={num_clues} work_score={work_score} tier={max_tier}"
+                comment = f"# givens={num_clues} work_score={work_score} tier={result_tier}"
                 f.write(f"{name}\t{args.width}\t{args.height}\t{givens}\t{solution}\t{comment}\n")
 
         print(f"\nWrote {len(puzzles)} puzzles to {args.output_file}", file=sys.stderr)
@@ -414,6 +474,7 @@ def main():
     print(f"\n# Summary:", file=sys.stderr)
     print(f"# Generated: {len(puzzles)}/{args.number} puzzles", file=sys.stderr)
     print(f"# Retries: {retries}", file=sys.stderr)
+    print(f"# Tiers: {tier_dist}", file=sys.stderr)
     print(f"# Elapsed: {elapsed:.2f}s", file=sys.stderr)
     if puzzles:
         avg_clues = total_clues / len(puzzles)
