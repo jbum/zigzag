@@ -47,7 +47,11 @@ def main():
         if width and height and (width > 12 or height > 12):
             cmd.extend(["--puzzles-per-page", "1", "--answers-per-page", "6"])
 
-        subprocess.run(cmd, check=True)
+        # only run this command if the output file does not exist, or the modification date of the data file is newer
+        if not output_file.exists() or puzzle_file.stat().st_mtime > output_file.stat().st_mtime:
+            subprocess.run(cmd, check=True)
+        # else:
+        #     print(f"Skipping {output_file} because it already exists and is up to date")    
 
     print("Done.")
 
