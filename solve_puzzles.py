@@ -110,6 +110,7 @@ def main():
     total_work_score = 0
     unsolved_puzzles = []
     total_unsolved_squares = 0
+    tier_counts = {1: 0, 2: 0, 3: 0}  # Track solved puzzles by max tier used
 
     start_time = time.time()
 
@@ -142,6 +143,8 @@ def main():
         if is_solved:
             solved_count += 1
             total_work_score += work_score
+            if max_tier_used in tier_counts:
+                tier_counts[max_tier_used] += 1
 
             # Check against expected solution if available
             if puzzle['answer'] and solution_or_partial != puzzle['answer']:
@@ -196,6 +199,13 @@ def main():
         if mult_count > 0:
             print(f"Multiple solutions: {mult_count}")
         print(f"Unsolved: {unsolved_count} ({unsolved_pct:.1f}%)")
+        if solved_count > 0:
+            tier_parts = []
+            for tier in [1, 2, 3]:
+                count = tier_counts[tier]
+                pct = count / solved_count * 100
+                tier_parts.append(f"{tier}={count} ({pct:.0f}%)")
+            print(f"Tiers: {' '.join(tier_parts)}")
         print(f"Elapsed time: {elapsed_time:.3f}s")
         print(f"Total work score: {total_work_score}")
         if solved_count > 0:
