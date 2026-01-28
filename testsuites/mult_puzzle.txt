@@ -1,0 +1,4 @@
+# Test suite for puzzles with multiple solutions
+# Format: name	width	height	givens	answer	# comment
+
+mult_2x2_corner1	2	2	1h		# Upper-left corner has 1, should have multiple solutions

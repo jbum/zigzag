@@ -956,3 +956,597 @@ def rule_single_path_extension(board):
                                     made_progress = True
 
     return made_progress
+
+
+def rule_dead_end_avoidance(board):
+    """
+    Dead-end avoidance: Prevent connecting two non-border vertex groups
+    that would create an isolated region.
+
+    Uses the board's persistent exits/border tracking.
+    A "dead end" is a non-border group with exits <= 1.
+    Connecting two dead ends creates an isolated region - forbidden.
+    """
+    made_progress = False
+
+    for cell in board.get_unknown_cells():
+        x, y = cell.x, cell.y
+
+        slash_forbidden = False
+        back_forbidden = False
+
+        # Check BACKSLASH: connects (x, y) to (x+1, y+1) - TL to BR
+        # If both TL and BR are non-border dead-ends, forbid backslash
+        tl_exits = board.get_vertex_group_exits(x, y)
+        br_exits = board.get_vertex_group_exits(x + 1, y + 1)
+        tl_border = board.get_vertex_group_border(x, y)
+        br_border = board.get_vertex_group_border(x + 1, y + 1)
+
+        if (not tl_border and not br_border and
+            tl_exits <= 1 and br_exits <= 1):
+            back_forbidden = True
+
+        # Check SLASH: connects (x+1, y) to (x, y+1) - TR to BL
+        # If both TR and BL are non-border dead-ends, forbid slash
+        tr_exits = board.get_vertex_group_exits(x + 1, y)
+        bl_exits = board.get_vertex_group_exits(x, y + 1)
+        tr_border = board.get_vertex_group_border(x + 1, y)
+        bl_border = board.get_vertex_group_border(x, y + 1)
+
+        if (not tr_border and not bl_border and
+            tr_exits <= 1 and bl_exits <= 1):
+            slash_forbidden = True
+
+        # If one is forbidden and the other isn't, place the other
+        if back_forbidden and not slash_forbidden:
+            if not board.would_form_loop(cell, SLASH):
+                board.place_value(cell, SLASH)
+                made_progress = True
+        elif slash_forbidden and not back_forbidden:
+            if not board.would_form_loop(cell, BACKSLASH):
+                board.place_value(cell, BACKSLASH)
+                made_progress = True
+
+    return made_progress
+
+
+def rule_equivalence_classes(board):
+    """
+    Equivalence class tracking: Track squares that must have the same slash orientation.
+
+    Uses the board's persistent equivalence tracking so that equivalences discovered
+    by any rule are shared and accumulated across rule invocations.
+
+    This rule:
+    1. Discovers new equivalences from clue constraints (need 1 from 2 adjacent unknowns)
+    2. Propagates known values through equivalence classes
+    3. Detects when one diagonal would force a loop in an equivalent cell
+    """
+    made_progress = False
+
+    # First pass: establish equivalences from clues with exactly 2 unknowns and 1 needed
+    for vertex in board.get_clued_vertices():
+        adjacent = board.get_adjacent_cells_for_vertex(vertex)
+        current_touches = 0
+        unknown_cells = []
+
+        for cell, slash_touches, backslash_touches in adjacent:
+            if cell.value == UNKNOWN:
+                unknown_cells.append((cell, slash_touches, backslash_touches))
+            elif cell.value == SLASH and slash_touches:
+                current_touches += 1
+            elif cell.value == BACKSLASH and backslash_touches:
+                current_touches += 1
+
+        needed = vertex.clue - current_touches
+
+        # If we need exactly 1 more line and have exactly 2 unknowns
+        # and they are ADJACENT (share an edge), they must have the same slash value
+        if needed == 1 and len(unknown_cells) == 2:
+            cell1, slash1, back1 = unknown_cells[0]
+            cell2, slash2, back2 = unknown_cells[1]
+
+            # Check if they're adjacent (share an edge, not diagonal)
+            dx = abs(cell1.x - cell2.x)
+            dy = abs(cell1.y - cell2.y)
+            cells_are_adjacent = (dx == 1 and dy == 0) or (dx == 0 and dy == 1)
+
+            if cells_are_adjacent:
+                # Use board's equivalence tracking - may raise SolverDebugError if conflicts
+                if board.mark_cells_equivalent(cell1, cell2):
+                    made_progress = True
+
+    # Second pass: propagate known values through equivalence classes
+    for cell in board.get_unknown_cells():
+        equiv_value = board.get_equivalence_class_value(cell)
+
+        if equiv_value != UNKNOWN:
+            # This cell should have this value
+            if not board.would_form_loop(cell, equiv_value):
+                board.place_value(cell, equiv_value)
+                made_progress = True
+            else:
+                # Would form a loop - try the other value
+                other_value = BACKSLASH if equiv_value == SLASH else SLASH
+                if not board.would_form_loop(cell, other_value):
+                    board.place_value(cell, other_value)
+                    made_progress = True
+
+    # Third pass: check if one diagonal would force a loop in an equivalent cell
+    for cell in board.get_unknown_cells():
+        equiv_cells = [c for c in board.get_equivalent_cells(cell)
+                       if c != cell and c.value == UNKNOWN]
+
+        if not equiv_cells:
+            continue
+
+        # Check if SLASH would force any equivalent cell into a loop
+        slash_forbidden = any(board.would_form_loop(c, SLASH) for c in equiv_cells)
+        back_forbidden = any(board.would_form_loop(c, BACKSLASH) for c in equiv_cells)
+
+        # If one is forbidden, use the other
+        if slash_forbidden and not back_forbidden:
+            if not board.would_form_loop(cell, BACKSLASH):
+                board.place_value(cell, BACKSLASH)
+                made_progress = True
+        elif back_forbidden and not slash_forbidden:
+            if not board.would_form_loop(cell, SLASH):
+                board.place_value(cell, SLASH)
+                made_progress = True
+
+    return made_progress
+
+
+def rule_vbitmap_propagation(board):
+    """
+    V-bitmap propagation: Track and propagate which v-shapes are possible.
+
+    Uses the board's persistent equivalence tracking so that equivalences
+    discovered here are shared with other rules.
+
+    V-bitmap (per cell):
+    - bit 0: can form \/ shape with cell to the right
+    - bit 1: can form /\ shape with cell to the right
+    - bit 2: can form > shape with cell below
+    - bit 3: can form < shape with cell below
+
+    Rules:
+    1. A 1 clue can never have a v-shape pointing AT it
+    2. A 3 clue can never have a v-shape pointing AWAY from it
+    3. A 2 clue propagates restrictions across
+    4. When both v-shapes are ruled out between two cells, they're equivalent
+
+    This rule iterates until no more changes can be made to the v-bitmap,
+    similar to Simon Tatham's implementation.
+    """
+    made_progress = False
+    w, h = board.width, board.height
+
+    # Initialize vbitmap - all shapes initially possible
+    vbitmap = [[0xF for _ in range(w)] for _ in range(h)]
+
+    # Iterate until convergence
+    changed = True
+    while changed:
+        changed = False
+
+        # Apply constraints from known cell values
+        for y in range(h):
+            for x in range(w):
+                cell = board.get_cell(x, y)
+                if cell.value == UNKNOWN:
+                    continue
+                s = cell.value
+                old = vbitmap[y][x]
+                if s == SLASH:
+                    vbitmap[y][x] &= ~0x5  # Can't do \/ or >
+                    if x > 0 and (vbitmap[y][x-1] & 0x2):
+                        vbitmap[y][x-1] &= ~0x2
+                        changed = True
+                    if y > 0 and (vbitmap[y-1][x] & 0x8):
+                        vbitmap[y-1][x] &= ~0x8
+                        changed = True
+                else:
+                    vbitmap[y][x] &= ~0xA  # Can't do /\ or <
+                    if x > 0 and (vbitmap[y][x-1] & 0x1):
+                        vbitmap[y][x-1] &= ~0x1
+                        changed = True
+                    if y > 0 and (vbitmap[y-1][x] & 0x4):
+                        vbitmap[y-1][x] &= ~0x4
+                        changed = True
+                if vbitmap[y][x] != old:
+                    changed = True
+
+        # Apply constraints from clue values (interior vertices only)
+        for vy in range(1, h):
+            for vx in range(1, w):
+                vertex = board.get_vertex(vx, vy)
+                if vertex is None or vertex.clue is None:
+                    continue
+                c = vertex.clue
+
+                if c == 1:
+                    # 1 clue: no v-shape pointing AT it
+                    old1 = vbitmap[vy-1][vx-1]
+                    old2 = vbitmap[vy][vx-1]
+                    old3 = vbitmap[vy-1][vx]
+                    vbitmap[vy-1][vx-1] &= ~0x5
+                    vbitmap[vy][vx-1] &= ~0x2
+                    vbitmap[vy-1][vx] &= ~0x8
+                    if vbitmap[vy-1][vx-1] != old1 or vbitmap[vy][vx-1] != old2 or vbitmap[vy-1][vx] != old3:
+                        changed = True
+
+                elif c == 3:
+                    # 3 clue: no v-shape pointing AWAY from it
+                    old1 = vbitmap[vy-1][vx-1]
+                    old2 = vbitmap[vy][vx-1]
+                    old3 = vbitmap[vy-1][vx]
+                    vbitmap[vy-1][vx-1] &= ~0xA
+                    vbitmap[vy][vx-1] &= ~0x1
+                    vbitmap[vy-1][vx] &= ~0x4
+                    if vbitmap[vy-1][vx-1] != old1 or vbitmap[vy][vx-1] != old2 or vbitmap[vy-1][vx] != old3:
+                        changed = True
+
+                elif c == 2:
+                    # 2 clue: propagate restrictions across
+                    old_tl = vbitmap[vy-1][vx-1]
+                    old_bl = vbitmap[vy][vx-1]
+                    old_tr = vbitmap[vy-1][vx]
+
+                    # Horizontal: between top pair and bottom pair
+                    top = vbitmap[vy-1][vx-1] & 0x3
+                    bot = vbitmap[vy][vx-1] & 0x3
+                    vbitmap[vy-1][vx-1] &= ~(0x3 ^ bot)
+                    vbitmap[vy][vx-1] &= ~(0x3 ^ top)
+
+                    # Vertical: between left pair and right pair
+                    left = vbitmap[vy-1][vx-1] & 0xC
+                    right = vbitmap[vy-1][vx] & 0xC
+                    vbitmap[vy-1][vx-1] &= ~(0xC ^ right)
+                    vbitmap[vy-1][vx] &= ~(0xC ^ left)
+
+                    if vbitmap[vy-1][vx-1] != old_tl or vbitmap[vy][vx-1] != old_bl or vbitmap[vy-1][vx] != old_tr:
+                        changed = True
+
+        # When both v-shapes are ruled out between adjacent cells,
+        # mark them as equivalent
+        for y in range(h):
+            for x in range(w):
+                cell = board.get_cell(x, y)
+
+                # Check horizontal neighbor
+                if x + 1 < w:
+                    right_cell = board.get_cell(x + 1, y)
+                    if not (vbitmap[y][x] & 0x3):
+                        if board.mark_cells_equivalent(cell, right_cell):
+                            made_progress = True
+                            changed = True
+
+                # Check vertical neighbor
+                if y + 1 < h:
+                    below_cell = board.get_cell(x, y + 1)
+                    if not (vbitmap[y][x] & 0xC):
+                        if board.mark_cells_equivalent(cell, below_cell):
+                            made_progress = True
+                            changed = True
+
+    return made_progress
+
+
+def rule_simon_unified(board):
+    """
+    Unified rule that closely mimics Simon Tatham's slant solver.
+
+    This implements all of Simon's deduction techniques in a single rule,
+    using the board's persistent tracking (slashval, vbitmap, exits, border)
+    to allow information to flow efficiently between techniques.
+
+    Techniques:
+    1. Clue completion with equivalence tracking
+    2. Loop avoidance + dead-end avoidance + equivalence-based filling
+    3. V-bitmap propagation
+    """
+    w, h = board.width, board.height
+    W, H = w + 1, h + 1
+    made_progress = False
+    done_something = True
+
+    while done_something:
+        done_something = False
+
+        # =================================================================
+        # PHASE 1: Clue completion with adjacent equivalent pair tracking
+        # =================================================================
+        for vy in range(H):
+            for vx in range(W):
+                vertex = board.get_vertex(vx, vy)
+                if vertex is None or vertex.clue is None:
+                    continue
+
+                c = vertex.clue
+
+                # Build list of neighbors with their slash relationship
+                # Order matters - we need them in order around the vertex
+                neighbours = []
+                if vx > 0 and vy > 0:
+                    cell = board.get_cell(vx - 1, vy - 1)
+                    neighbours.append((cell, BACKSLASH))  # \ touches BR corner
+                if vx > 0 and vy < h:
+                    cell = board.get_cell(vx - 1, vy)
+                    neighbours.append((cell, SLASH))      # / touches TR corner
+                if vx < w and vy < h:
+                    cell = board.get_cell(vx, vy)
+                    neighbours.append((cell, BACKSLASH))  # \ touches TL corner
+                if vx < w and vy > 0:
+                    cell = board.get_cell(vx, vy - 1)
+                    neighbours.append((cell, SLASH))      # / touches BL corner
+
+                if not neighbours:
+                    continue
+
+                nneighbours = len(neighbours)
+
+                # Count undecided (nu) and lines still needed (nl)
+                # Also track adjacent equivalent pairs (like Simon's solver)
+                nu = 0
+                nl = c
+
+                # Get equiv class of last cell (wrapping around)
+                last_cell = neighbours[nneighbours - 1][0]
+                if last_cell.value == UNKNOWN:
+                    last_eq = board.get_cell_equiv_root(last_cell)
+                else:
+                    last_eq = -1
+
+                # Track equivalent pair: meq = equiv class, mj1/mj2 = the two cells
+                meq = -1
+                mj1 = None
+                mj2 = None
+
+                for i in range(nneighbours):
+                    cell, slash_type = neighbours[i]
+                    if cell.value == UNKNOWN:
+                        nu += 1
+                        if meq < 0:
+                            eq = board.get_cell_equiv_root(cell)
+                            if eq == last_eq and last_cell != cell:
+                                # Found adjacent equivalent pair!
+                                meq = eq
+                                mj1 = last_cell
+                                mj2 = cell
+                                nl -= 1    # Count as one line
+                                nu -= 2    # Remove both from undecided
+                            else:
+                                last_eq = eq
+                    else:
+                        last_eq = -1
+                        if cell.value == slash_type:
+                            nl -= 1  # This cell provides a line
+                    last_cell = cell
+
+                # Check if impossible
+                if nl < 0 or nl > nu:
+                    continue
+
+                # If we can fill remaining cells
+                if nu > 0 and (nl == 0 or nl == nu):
+                    for cell, slash_type in neighbours:
+                        # Skip cells in equivalent pair - they're handled as unit
+                        if cell == mj1 or cell == mj2:
+                            continue
+                        if cell.value == UNKNOWN:
+                            if nl > 0:
+                                value = slash_type
+                            else:
+                                value = BACKSLASH if slash_type == SLASH else SLASH
+
+                            if not board.would_form_loop(cell, value):
+                                board.place_value(cell, value)
+                                done_something = True
+                                made_progress = True
+
+                # If exactly 2 undecided and need 1 line, and they're adjacent,
+                # mark them as equivalent (they must have same slash type)
+                elif nu == 2 and nl == 1:
+                    # Find the two undecided cells
+                    last_idx = -1
+                    for i in range(nneighbours):
+                        cell, _ = neighbours[i]
+                        if cell.value == UNKNOWN and cell != mj1 and cell != mj2:
+                            if last_idx < 0:
+                                last_idx = i
+                            elif last_idx == i - 1 or (last_idx == 0 and i == nneighbours - 1):
+                                # Adjacent! Mark them equivalent
+                                cell1 = neighbours[last_idx][0]
+                                cell2 = neighbours[i][0]
+                                if board.mark_cells_equivalent(cell1, cell2):
+                                    done_something = True
+                                    made_progress = True
+                                break
+
+        if done_something:
+            continue
+
+        # =================================================================
+        # PHASE 2: Loop avoidance, dead-end avoidance, equivalence filling
+        # =================================================================
+        for y in range(h):
+            for x in range(w):
+                cell = board.get_cell(x, y)
+                if cell.value != UNKNOWN:
+                    continue
+
+                fs = False  # Force slash
+                bs = False  # Force backslash
+
+                # Check equivalence class value
+                v = board.get_equivalence_class_value(cell)
+                if v == SLASH:
+                    fs = True
+                elif v == BACKSLASH:
+                    bs = True
+
+                # Check if backslash would form loop (then must be slash)
+                # Backslash connects (x,y) to (x+1,y+1)
+                c1 = board.get_vertex_root(x, y)
+                c2 = board.get_vertex_root(x + 1, y + 1)
+                if c1 == c2:
+                    fs = True  # Would form loop, force slash
+
+                # Dead-end avoidance for backslash
+                if not fs:
+                    if (not board.get_vertex_group_border(x, y) and
+                        not board.get_vertex_group_border(x + 1, y + 1) and
+                        board.get_vertex_group_exits(x, y) <= 1 and
+                        board.get_vertex_group_exits(x + 1, y + 1) <= 1):
+                        fs = True  # Dead-end avoidance
+
+                # Check if slash would form loop (then must be backslash)
+                # Slash connects (x+1,y) to (x,y+1)
+                c1 = board.get_vertex_root(x + 1, y)
+                c2 = board.get_vertex_root(x, y + 1)
+                if c1 == c2:
+                    bs = True  # Would form loop, force backslash
+
+                # Dead-end avoidance for slash
+                if not bs:
+                    if (not board.get_vertex_group_border(x + 1, y) and
+                        not board.get_vertex_group_border(x, y + 1) and
+                        board.get_vertex_group_exits(x + 1, y) <= 1 and
+                        board.get_vertex_group_exits(x, y + 1) <= 1):
+                        bs = True  # Dead-end avoidance
+
+                if fs and bs:
+                    continue  # Contradiction, skip
+
+                if fs:
+                    board.place_value(cell, SLASH)
+                    done_something = True
+                    made_progress = True
+                elif bs:
+                    board.place_value(cell, BACKSLASH)
+                    done_something = True
+                    made_progress = True
+
+        if done_something:
+            continue
+
+        # =================================================================
+        # PHASE 3: V-bitmap propagation
+        # =================================================================
+        for y in range(h):
+            for x in range(w):
+                cell = board.get_cell(x, y)
+                s = cell.value
+
+                # If cell has a value, clear contradicting v-shapes
+                if s != UNKNOWN:
+                    # Clear from left neighbor
+                    if x > 0:
+                        left_cell = board.get_cell(x - 1, y)
+                        bits = 0x1 if s == BACKSLASH else 0x2  # \ means no >, / means no <
+                        if board.vbitmap_clear(left_cell, bits):
+                            done_something = True
+                            made_progress = True
+
+                    # Clear from self for right neighbor
+                    if x + 1 < w:
+                        bits = 0x2 if s == BACKSLASH else 0x1  # \ means no <, / means no >
+                        if board.vbitmap_clear(cell, bits):
+                            done_something = True
+                            made_progress = True
+
+                    # Clear from above neighbor
+                    if y > 0:
+                        above_cell = board.get_cell(x, y - 1)
+                        bits = 0x4 if s == BACKSLASH else 0x8  # \ means no v, / means no ^
+                        if board.vbitmap_clear(above_cell, bits):
+                            done_something = True
+                            made_progress = True
+
+                    # Clear from self for below neighbor
+                    if y + 1 < h:
+                        bits = 0x8 if s == BACKSLASH else 0x4  # \ means no ^, / means no v
+                        if board.vbitmap_clear(cell, bits):
+                            done_something = True
+                            made_progress = True
+
+                # If both h-shapes ruled out, mark cells equivalent
+                if x + 1 < w and not (board.vbitmap_get(cell) & 0x3):
+                    right_cell = board.get_cell(x + 1, y)
+                    if board.mark_cells_equivalent(cell, right_cell):
+                        done_something = True
+                        made_progress = True
+
+                # If both v-shapes ruled out, mark cells equivalent
+                if y + 1 < h and not (board.vbitmap_get(cell) & 0xC):
+                    below_cell = board.get_cell(x, y + 1)
+                    if board.mark_cells_equivalent(cell, below_cell):
+                        done_something = True
+                        made_progress = True
+
+        # V-bitmap constraints from clues (only interior clues)
+        for vy in range(1, H - 1):
+            for vx in range(1, W - 1):
+                vertex = board.get_vertex(vx, vy)
+                if vertex is None or vertex.clue is None:
+                    continue
+
+                c = vertex.clue
+                tl = board.get_cell(vx - 1, vy - 1)
+                bl = board.get_cell(vx - 1, vy)
+                tr = board.get_cell(vx, vy - 1)
+
+                if c == 1:
+                    # 1 clue: no v pointing at it
+                    # TL cell: clear both > (0x1) and v (0x4) pointing at clue
+                    if board.vbitmap_clear(tl, 0x5):
+                        done_something = True
+                        made_progress = True
+                    # BL cell: clear < (0x2) pointing at clue
+                    if board.vbitmap_clear(bl, 0x2):
+                        done_something = True
+                        made_progress = True
+                    # TR cell: clear ^ (0x8) pointing at clue
+                    if board.vbitmap_clear(tr, 0x8):
+                        done_something = True
+                        made_progress = True
+
+                elif c == 3:
+                    # 3 clue: no v pointing away
+                    # TL cell: clear < (0x2) and ^ (0x8) pointing away
+                    if board.vbitmap_clear(tl, 0xA):
+                        done_something = True
+                        made_progress = True
+                    # BL cell: clear > (0x1) pointing away
+                    if board.vbitmap_clear(bl, 0x1):
+                        done_something = True
+                        made_progress = True
+                    # TR cell: clear v (0x4) pointing away
+                    if board.vbitmap_clear(tr, 0x4):
+                        done_something = True
+                        made_progress = True
+
+                elif c == 2:
+                    # 2 clue: propagate constraints across
+                    # Horizontal propagation (between tl and bl)
+                    tl_h = board.vbitmap_get(tl) & 0x3
+                    bl_h = board.vbitmap_get(bl) & 0x3
+                    if board.vbitmap_clear(tl, 0x3 ^ bl_h):
+                        done_something = True
+                        made_progress = True
+                    if board.vbitmap_clear(bl, 0x3 ^ tl_h):
+                        done_something = True
+                        made_progress = True
+
+                    # Vertical propagation (between tl and tr)
+                    tl_v = board.vbitmap_get(tl) & 0xC
+                    tr_v = board.vbitmap_get(tr) & 0xC
+                    if board.vbitmap_clear(tl, 0xC ^ tr_v):
+                        done_something = True
+                        made_progress = True
+                    if board.vbitmap_clear(tr, 0xC ^ tl_v):
+                        done_something = True
+                        made_progress = True
+
+    return made_progress

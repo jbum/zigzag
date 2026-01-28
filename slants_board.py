@@ -122,6 +122,224 @@ class Board:
         # Each cell's two endpoints are nodes; we track connectivity
         self._init_union_find()
 
+        # Union-find structure for cell equivalence tracking
+        # Cells that must have the same slash orientation are in the same equivalence class
+        self._init_equivalence()
+
+        # V-bitmap tracking for v-shape possibilities
+        # Each cell has 4 bits indicating which v-shapes are still possible
+        self._init_vbitmap()
+
+        # Exits and border tracking for dead-end avoidance
+        self._init_exits_border()
+
+    def _init_equivalence(self):
+        """Initialize equivalence tracking for cells."""
+        num_cells = self.width * self.height
+        self._equiv_parent = list(range(num_cells))
+        self._equiv_rank = [0] * num_cells
+        # slashval[i] = slash value (SLASH/BACKSLASH/0) for equivalence class with root i
+        # 0 means unknown, SLASH=1 means /, BACKSLASH=2 means \
+        self._slashval = [0] * num_cells
+
+    def _init_vbitmap(self):
+        """
+        Initialize v-bitmap tracking for cells.
+
+        Each cell has 4 bits indicating which v-shapes are possible:
+        - Bit 0 (0x1): > shape with cell to right (this=/, right=\\)
+        - Bit 1 (0x2): < shape with cell to right (this=\\, right=/)
+        - Bit 2 (0x4): v shape with cell below (this=/, below=\\)
+        - Bit 3 (0x8): ^ shape with cell below (this=\\, below=/)
+
+        The v-shape is defined by two adjacent cells forming a V pointing
+        at their shared edge's midpoint.
+        """
+        num_cells = self.width * self.height
+        # Initially all v-shapes are possible (0xF = 1111 binary)
+        self._vbitmap = [0xF] * num_cells
+
+    def _init_exits_border(self):
+        """
+        Initialize exits and border tracking for dead-end avoidance.
+
+        - exits[v] = number of potential new connections for vertex group v
+        - border[v] = True if vertex group v contains a border vertex
+
+        A vertex on the grid edge starts with exits = clue value (or 4 if no clue).
+        A border vertex is one on the edge of the grid.
+        """
+        W = self.width + 1
+        H = self.height + 1
+        num_vertices = W * H
+
+        self._exits = [0] * num_vertices
+        self._border = [False] * num_vertices
+
+        for vy in range(H):
+            for vx in range(W):
+                idx = vy * W + vx
+                # Border if on edge of grid
+                if vy == 0 or vy == H - 1 or vx == 0 or vx == W - 1:
+                    self._border[idx] = True
+
+                # Exits = clue value, or 4 if no clue
+                vertex = self.get_vertex(vx, vy)
+                if vertex.clue is not None:
+                    self._exits[idx] = vertex.clue
+                else:
+                    self._exits[idx] = 4
+
+    def _equiv_find(self, x):
+        """Find root of equivalence class with path compression."""
+        if self._equiv_parent[x] != x:
+            self._equiv_parent[x] = self._equiv_find(self._equiv_parent[x])
+        return self._equiv_parent[x]
+
+    def _cell_index(self, cell):
+        """Convert cell to index."""
+        return cell.y * self.width + cell.x
+
+    def _cell_from_index(self, idx):
+        """Convert index to cell."""
+        return self.cells[idx]
+
+    def get_cell_equiv_root(self, cell):
+        """Get the equivalence class root index for a cell."""
+        idx = self._cell_index(cell)
+        return self._equiv_find(idx)
+
+    def mark_cells_equivalent(self, cell1, cell2):
+        """
+        Mark two cells as equivalent (must have same slash orientation).
+
+        Returns True if this was a new equivalence (progress made).
+        Raises SolverDebugError if equivalence conflicts with known solution.
+        Returns False and does NOT merge if slashval conflict detected.
+        """
+        idx1 = self._cell_index(cell1)
+        idx2 = self._cell_index(cell2)
+
+        r1 = self._equiv_find(idx1)
+        r2 = self._equiv_find(idx2)
+
+        if r1 == r2:
+            return False  # Already equivalent, no progress
+
+        # Check for conflict with known solution
+        if self.known_solution:
+            # Get known values for both cells
+            val1 = cell1.known_debug_value
+            val2 = cell2.known_debug_value
+            if val1 is not None and val2 is not None and val1 != val2:
+                raise SolverDebugError(
+                    f"Equivalence error: cells ({cell1.x},{cell1.y}) and ({cell2.x},{cell2.y}) "
+                    f"marked equivalent but have different known values ({val1} vs {val2})"
+                )
+
+        # Check for slashval conflict (like Simon's solver does)
+        sv1 = self._slashval[r1]
+        sv2 = self._slashval[r2]
+        if sv1 != 0 and sv2 != 0 and sv1 != sv2:
+            # Conflict - this equivalence is impossible
+            return False
+
+        # Propagate slashval
+        merged_sv = sv1 if sv1 != 0 else sv2
+
+        # Union by rank
+        if self._equiv_rank[r1] < self._equiv_rank[r2]:
+            r1, r2 = r2, r1
+        self._equiv_parent[r2] = r1
+        if self._equiv_rank[r1] == self._equiv_rank[r2]:
+            self._equiv_rank[r1] += 1
+
+        # Set merged slashval on new root
+        self._slashval[r1] = merged_sv
+
+        return True  # New equivalence established
+
+    def are_cells_equivalent(self, cell1, cell2):
+        """Check if two cells are in the same equivalence class."""
+        idx1 = self._cell_index(cell1)
+        idx2 = self._cell_index(cell2)
+        return self._equiv_find(idx1) == self._equiv_find(idx2)
+
+    def get_equivalent_cells(self, cell):
+        """Get all cells in the same equivalence class as the given cell."""
+        target_root = self._equiv_find(self._cell_index(cell))
+        result = []
+        for c in self.cells:
+            if self._equiv_find(self._cell_index(c)) == target_root:
+                result.append(c)
+        return result
+
+    def get_equivalence_class_value(self, cell):
+        """
+        Get the known value for a cell's equivalence class, if any cell in the class has a value.
+        Returns UNKNOWN if no cell in the class has been filled.
+        This is now O(1) using slashval.
+        """
+        idx = self._cell_index(cell)
+        root = self._equiv_find(idx)
+        return self._slashval[root]
+
+    def set_equivalence_class_value(self, cell, value):
+        """
+        Set the slash value for a cell's equivalence class.
+        Used when a cell is filled to propagate to its equivalence class.
+        """
+        idx = self._cell_index(cell)
+        root = self._equiv_find(idx)
+        self._slashval[root] = value
+
+    # V-bitmap methods
+    def vbitmap_get(self, cell):
+        """Get the v-bitmap for a cell."""
+        idx = self._cell_index(cell)
+        return self._vbitmap[idx]
+
+    def vbitmap_clear(self, cell, bits):
+        """
+        Clear specified bits from a cell's v-bitmap.
+        Returns True if any bits were actually cleared (progress made).
+        """
+        idx = self._cell_index(cell)
+        old = self._vbitmap[idx]
+        new = old & ~bits
+        if new != old:
+            self._vbitmap[idx] = new
+            return True
+        return False
+
+    # Exits/border methods
+    def get_vertex_root(self, vx, vy):
+        """Get the root of the vertex group for vertex at (vx, vy)."""
+        idx = self._vertex_index(vx, vy)
+        return self._find(idx)
+
+    def get_vertex_group_exits(self, vx, vy):
+        """Get the number of exits for the vertex group containing (vx, vy)."""
+        root = self.get_vertex_root(vx, vy)
+        return self._exits[root]
+
+    def get_vertex_group_border(self, vx, vy):
+        """Check if the vertex group containing (vx, vy) includes a border vertex."""
+        root = self.get_vertex_root(vx, vy)
+        return self._border[root]
+
+    def _decr_exits(self, vx, vy):
+        """
+        Decrement exits count for a vertex (called when an edge no longer provides an exit).
+        Only decrements for non-clued vertices, matching Simon's decr_exits behavior.
+        """
+        vertex = self.get_vertex(vx, vy)
+        if vertex.clue is not None:
+            return  # Clued vertices have fixed exits, don't decrement
+        idx = self._vertex_index(vx, vy)
+        root = self._find(idx)
+        self._exits[root] -= 1
+
     def _decode_givens(self, givens_string):
         """
         Decode RLE-encoded givens string.
@@ -184,11 +402,22 @@ class Board:
         rx, ry = self._find(x), self._find(y)
         if rx == ry:
             return False  # Already connected - would form a loop
+
+        # Merge exits and border info before union
+        # Subtract 2 because each group used one exit to form this connection
+        merged_exits = self._exits[rx] + self._exits[ry] - 2
+        merged_border = self._border[rx] or self._border[ry]
+
         if self._rank[rx] < self._rank[ry]:
             rx, ry = ry, rx
         self._parent[ry] = rx
         if self._rank[rx] == self._rank[ry]:
             self._rank[rx] += 1
+
+        # Set merged values on new root
+        self._exits[rx] = merged_exits
+        self._border[rx] = merged_border
+
         return True
 
     def _vertex_index(self, vx, vy):
@@ -303,17 +532,33 @@ class Board:
         x, y = cell.x, cell.y
 
         if value == SLASH:
+            # Connects bottom-left (x, y+1) to top-right (x+1, y)
             v1 = self._vertex_index(x, y + 1)
             v2 = self._vertex_index(x + 1, y)
+            # The non-connected vertices lose an exit
+            non_v1 = (x, y)        # top-left
+            non_v2 = (x + 1, y + 1)  # bottom-right
         else:  # BACKSLASH
+            # Connects top-left (x, y) to bottom-right (x+1, y+1)
             v1 = self._vertex_index(x, y)
             v2 = self._vertex_index(x + 1, y + 1)
+            # The non-connected vertices lose an exit
+            non_v1 = (x + 1, y)    # top-right
+            non_v2 = (x, y + 1)    # bottom-left
 
         # Union the vertices
         if not self._union(v1, v2):
             raise ValueError(f"Placing {value} at ({x},{y}) would form a loop")
 
+        # Decrement exits for non-connected vertices
+        self._decr_exits(*non_v1)
+        self._decr_exits(*non_v2)
+
         cell.set_value(value)
+
+        # Update slashval for this cell's equivalence class
+        self.set_equivalence_class_value(cell, value)
+
         return True
 
     def get_clued_vertices(self):
@@ -378,16 +623,29 @@ class Board:
         return (
             [c.value for c in self.cells],
             self._parent.copy(),
-            self._rank.copy()
+            self._rank.copy(),
+            self._equiv_parent.copy(),
+            self._equiv_rank.copy(),
+            self._slashval.copy(),
+            self._vbitmap.copy(),
+            self._exits.copy(),
+            self._border.copy()
         )
 
     def restore_state(self, state):
         """Restore board from a saved state snapshot."""
-        cell_values, parent, rank = state
+        (cell_values, parent, rank, equiv_parent, equiv_rank,
+         slashval, vbitmap, exits, border) = state
         for cell, value in zip(self.cells, cell_values):
             cell.value = value
         self._parent = parent.copy()
         self._rank = rank.copy()
+        self._equiv_parent = equiv_parent.copy()
+        self._equiv_rank = equiv_rank.copy()
+        self._slashval = slashval.copy()
+        self._vbitmap = vbitmap.copy()
+        self._exits = exits.copy()
+        self._border = border.copy()
 
     def disable_debug_checking(self):
         """Disable debug checking for backtracking."""
@@ -419,6 +677,18 @@ class Board:
         # Copy union-find
         new_board._parent = self._parent.copy()
         new_board._rank = self._rank.copy()
+
+        # Copy equivalence tracking
+        new_board._equiv_parent = self._equiv_parent.copy()
+        new_board._equiv_rank = self._equiv_rank.copy()
+        new_board._slashval = self._slashval.copy()
+
+        # Copy vbitmap
+        new_board._vbitmap = self._vbitmap.copy()
+
+        # Copy exits/border
+        new_board._exits = self._exits.copy()
+        new_board._border = self._border.copy()
 
         return new_board
 

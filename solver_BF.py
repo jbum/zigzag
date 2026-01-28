@@ -19,7 +19,11 @@ from slants_rules import (
     rule_v_pattern_with_three,
     rule_border_two_v_shape,
     rule_single_path_extension,
-    rule_diagonal_ones
+    rule_diagonal_ones,
+    rule_dead_end_avoidance,
+    rule_equivalence_classes,
+    rule_vbitmap_propagation,
+    rule_simon_unified,
 )
 
 
@@ -39,6 +43,10 @@ RULES = [
     ("adjacent_ones", 8, 2, rule_adjacent_ones),
     ("adjacent_threes", 8, 2, rule_adjacent_threes),
     # ("diagonal_ones", 8, 2, rule_diagonal_ones),  # Redundant, slows performance
+    ("dead_end_avoidance", 9, 2, rule_dead_end_avoidance),
+    ("equivalence_classes", 9, 2, rule_equivalence_classes),
+    ("vbitmap_propagation", 9, 2, rule_vbitmap_propagation),
+    ("simon_unified", 9, 2, rule_simon_unified),
 ]
 
 

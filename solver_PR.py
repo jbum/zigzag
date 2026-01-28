@@ -19,6 +19,10 @@ from slants_rules import (
     rule_diagonal_ones,
     rule_trial_clue_violation,
     rule_one_step_lookahead,
+    rule_dead_end_avoidance,
+    rule_equivalence_classes,
+    rule_vbitmap_propagation,
+    rule_simon_unified,
 )
 
 
@@ -38,6 +42,11 @@ RULES = [
     ("adjacent_ones", 8, 2, rule_adjacent_ones),
     ("adjacent_threes", 8, 2, rule_adjacent_threes),
     # ("diagonal_ones", 8, 2, rule_diagonal_ones),  # Redundant, slows performance
+    # Re-enable old rules alongside unified rule for now
+    ("dead_end_avoidance", 9, 2, rule_dead_end_avoidance),
+    ("equivalence_classes", 9, 2, rule_equivalence_classes),
+    ("vbitmap_propagation", 9, 2, rule_vbitmap_propagation),
+    ("simon_unified", 9, 2, rule_simon_unified),
     ("trial_clue_violation", 10, 3, rule_trial_clue_violation),
     ("one_step_lookahead", 15, 3, rule_one_step_lookahead),
 ]

@@ -1,0 +1,67 @@
+# Generated Slants Puzzles
+# Command: gen_puzzles.py -w 5 -ht 5 -n 60 -s BF -r 1 -o puzzledata/puzzles_5x5_BF.txt
+# Size: 5x5, Count: 60
+# Solver: BF, Seed: 1
+# Elapsed: 2.32s, Retries: 0
+# Average clues: 12.8
+
+gen_5x5_1	5	5	c2a021e12g4a2c1c0b1	/\/\\\\\\/\//\/////\\/\\\	# givens=11 work_score=9 tier=1
+gen_5x5_2	5	5	b1c02a22e1a2a2a2a1a4g2a	\\\\\//////\/\/\\/\/\/\\/	# givens=12 work_score=10 tier=1
+gen_5x5_3	5	5	a10c1a33e2a0a42h20a2c	\\///\//\/\//\\/\\\\\\///	# givens=12 work_score=10 tier=1
+gen_5x5_4	5	5	a0i2a122b1a1a2b22b2a0b2a	\//\\/\\\///////\/\\/\/\/	# givens=13 work_score=11 tier=1
+gen_5x5_5	5	5	0b12c1c0d22c4c1a2a011c	////\\\/\\//\\/\/\/\\\\/\	# givens=13 work_score=11 tier=1
+gen_5x5_6	5	5	c12b4b2c1c0c20b22f0a	\///\/\\/\\\////\\\\////\	# givens=11 work_score=11 tier=1
+gen_5x5_7	5	5	1b2c1c0d1a02b11c2a0a2a0b	\\/\/\///\\\\/////\/\//\\	# givens=13 work_score=11 tier=1
+gen_5x5_8	5	5	a0b1c3b2a3d0d2b1a2a0b1a1	\//\\\/\\/\\\/\//\//\\\\\	# givens=12 work_score=11 tier=1
+gen_5x5_9	5	5	0a120d2c22a1c23a12a2d1b2a	///\////\\\\\\////\/\\\\/	# givens=15 work_score=12 tier=1
+gen_5x5_10	5	5	a2d1b21c3a22a2b3a1b3b1a0c	/\//\/\\\\//\////\/\//\\\	# givens=13 work_score=12 tier=1
+gen_5x5_11	5	5	b121a2c3b1a2f1b114c2b2a	///\\\\//\\///\//\//\//\/	# givens=13 work_score=12 tier=1
+gen_5x5_12	5	5	a0d03b3c32c1b4d4b0e	\/\\////////\\/\/\/\\//\\	# givens=10 work_score=12 tier=1
+gen_5x5_13	5	5	a2c1b1a1b3a22d2d4b1a2b1a	/\\//\\/\//\/\/\\/\\\/\\\	# givens=12 work_score=12 tier=1
+gen_5x5_14	5	5	a2c0c1b03b4b2d2a1b1d2a	/\/\\\\\\//\\/\/\\//\\/\/	# givens=11 work_score=13 tier=1
+gen_5x5_15	5	5	0d1b4a1a1b1d131a1c12a0a1b	/\/////\\///\/\/\\\\/\\\/	# givens=14 work_score=13 tier=1
+gen_5x5_16	5	5	b0c2b1a1d3b1c1a2232c2c	/\/\/\\\\//\\//\\///\\/\\	# givens=12 work_score=13 tier=1
+gen_5x5_17	5	5	b2c2b1a11a2b1a2b1a0a22a2d1a	//\\\\\\/\\\\/\\\\\\/////	# givens=14 work_score=13 tier=1
+gen_5x5_18	5	5	0b21c3a3e2b21b1a3a2d0c	/\/\\////\\/\/\\///\//\\\	# givens=12 work_score=14 tier=1
+gen_5x5_19	5	5	b1b122g3c2b3b4c0b2a1a	/////\\\//\/\\/\/////\/\\	# givens=11 work_score=14 tier=1
+gen_5x5_20	5	5	0f3b3c1b0a23d3b3d21a	//\\//\\//\\/\\\\\\//\\//	# givens=11 work_score=15 tier=1
+gen_5x5_21	5	5	b1b0a3a3b0a3d2b22c3a0b0c	\///\\\/\\/\\\\/\\////\\\	# givens=12 work_score=15 tier=1
+gen_5x5_22	5	5	a0b0e31131c2a122a12a22g	\/\\///\///\\\\\\///\\\\\	# givens=15 work_score=15 tier=1
+gen_5x5_23	5	5	e01b23b13b1a3b3a0b3c01c	/\\\\////\\/\\\\\\/\/\\\\	# givens=13 work_score=16 tier=1
+gen_5x5_24	5	5	a0c0c2b1a12b2b2a10b4g0	\/\/\//\///\\//\\\/////\/	# givens=12 work_score=17 tier=1
+gen_5x5_25	5	5	b1a1b3a3a2a2c0d3a1b3b0a2c	\\\\\/\/\//\\\\\\//\\\/\\	# givens=12 work_score=18 tier=1
+gen_5x5_26	5	5	1c0c1b1a2a3c2b1b4c1b2a1a	\/\\/\////\//\\\//\//\///	# givens=12 work_score=18 tier=1
+gen_5x5_27	5	5	a12b01b23a1c11b3d4a22e1a	//\\\////\///\\\/\\\/\\\\	# givens=14 work_score=20 tier=1
+gen_5x5_28	5	5	a0f2a2a0b21b22a1a12a1b0d0	\///\\///\/////\\\\/\\\//	# givens=14 work_score=20 tier=3
+gen_5x5_29	5	5	1c0a1a1a30a2a2a1a11h0a20c	\/\\/\\\\\//\\\\////\/\\\	# givens=14 work_score=22 tier=3
+gen_5x5_30	5	5	0a01k33b23121b23b0b0b	/\////\\\/\\/\\\\\\\\//\\	# givens=14 work_score=22 tier=3
+gen_5x5_31	5	5	a0a1c2a130a2b2c1a2a22a3h	\////\/\/\\/\/\////\\\/\\	# givens=13 work_score=22 tier=3
+gen_5x5_32	5	5	b02c2c0b11a1a1a2a122h2a	\\/\////\\/\//\//\\\\\\\/	# givens=13 work_score=23 tier=3
+gen_5x5_33	5	5	d0b122d3b1a2a1a011b2d0b	/\/\/\\/\////\/\\\\\\//\\	# givens=13 work_score=23 tier=3
+gen_5x5_34	5	5	11b2c22e1a1a4a3c2f1b1	\\//\\\//\\/\/\/\\\\/\\\\	# givens=12 work_score=23 tier=3
+gen_5x5_35	5	5	a02b1d1a0a122c3b0b22c20c	\/\//\/\\//\\\///\\\\/\\\	# givens=14 work_score=23 tier=3
+gen_5x5_36	5	5	c1a12a21c4f2a3a2d0c0b	//\\/\/\///\\\//////\//\\	# givens=11 work_score=23 tier=3
+gen_5x5_37	5	5	b0a2b233c22c1a2a20a2f0a1a	\\//\///\\////////\\//\\\	# givens=14 work_score=23 tier=1
+gen_5x5_38	5	5	a1b0a1a2c1a4a11c31a1a1a2a1e	\\/\/\\//\\/\\\///\//\/\/	# givens=14 work_score=23 tier=3
+gen_5x5_39	5	5	a12f32a2d01b2c1a41f1	//\///////\\\/\\\\/\\//\\	# givens=12 work_score=27 tier=3
+gen_5x5_40	5	5	b10b12a31a2c3c2a1b3a3f10	/\\/\/\\\\\\\/\\\\///\///	# givens=14 work_score=27 tier=3
+gen_5x5_41	5	5	c01a2b22c1e33c4c1c21a	//\//\/\//\\\//\/\\//\\//	# givens=12 work_score=27 tier=3
+gen_5x5_42	5	5	f0a22221g21a02b12e1a	\\\\\////////\//\\\\\\\//	# givens=13 work_score=28 tier=3
+gen_5x5_43	5	5	b1d1c2b3a3b1b3a1f0a10a	/\\\\\\/\//\\\\////\/\//\	# givens=11 work_score=30 tier=3
+gen_5x5_44	5	5	a2b10e1a13c21b3d32a0d0	/\\\\/\\\\//\\/\/\//\////	# givens=13 work_score=31 tier=3
+gen_5x5_45	5	5	a1c1a313d1a21b4a1b3b2a0e	//\///\\\\\\/\\\/\\/\\\\/	# givens=13 work_score=32 tier=3
+gen_5x5_46	5	5	b1c2b33c222b23a2a0b2d01b	/\\\/\\/\\\\/\\\\\\\//\\\	# givens=14 work_score=37 tier=3
+gen_5x5_47	5	5	e02b22b1b31b1c2b32d111	/\\\\\\\\\\/\/\/\\//\\\\\	# givens=14 work_score=40 tier=3
+gen_5x5_48	5	5	a1b2c12c33h22c3c0b0	////\\\//\/\\\\//\\/\/\//	# givens=11 work_score=42 tier=3
+gen_5x5_49	5	5	a0a110d1b13c0b2a2b3g2a	\/\\\\\\\/\/\\\///////\\/	# givens=12 work_score=44 tier=3
+gen_5x5_50	5	5	d11a2a2c2a33b3b2c21a0a1d	\////\/\\/\//\\/////\\\/\	# givens=13 work_score=44 tier=3
+gen_5x5_51	5	5	a0f13a0c1a2a3a2b1a23a001d	\/\//\///\\/\//\\\//\\\\\	# givens=14 work_score=47 tier=3
+gen_5x5_52	5	5	a2c1c1b1a2a31a2a22c2a3a1a2c	/\/\//\\\//////\\////\//\	# givens=14 work_score=51 tier=3
+gen_5x5_53	5	5	b1a0a2a3b0a3a2b21b3d2c10c	///\/\/\\\//\\\\///\//\\\	# givens=13 work_score=53 tier=3
+gen_5x5_54	5	5	1c0d3b0a3a1c2a4a212d1a1b	\\\\/\\/\\/\\\//\\/\\\\\\	# givens=13 work_score=70 tier=3
+gen_5x5_55	5	5	f0b33b1b2a1b4c2c1b20b	\\\///\//\//\/\///\\\\/\\	# givens=11 work_score=70 tier=3
+gen_5x5_56	5	5	b1c2c3a1a33a0a2a2b1312a0b1c	/\\\/\\\//\/\\\\/\\/\\\\\	# givens=15 work_score=89 tier=3
+gen_5x5_57	5	5	0f3b2e31a22a3b1a4b01d	///\//\\\//\\///\\/\\\/\\	# givens=12 work_score=101 tier=3
+gen_5x5_58	5	5	b1b0a323c22c1b13b2b21b01b	\///\///\\///\///\\\//\\\	# givens=15 work_score=131 tier=3
+gen_5x5_59	5	5	a12d3a3e2210e11b31d1a	//\///\\\/\\\\//\\\//////	# givens=13 work_score=146 tier=3
+gen_5x5_60	5	5	a21a11b32g00a33f2b0a1b	/\\////\//\\\/\//\\\/\\\\	# givens=13 work_score=152 tier=3
