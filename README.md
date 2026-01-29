@@ -181,14 +181,6 @@ cd golang && go build -o solve_puzzles .
 ./solve_puzzles -s PR ../testsuites/SGT_testsuite.txt
 ```
 
-## Development Notes
-
-- The project uses `pypy3` for better performance (as noted in `CLAUDE.md`)
-- A virtual environment is used (activated via `.autoenv` scripts)
-- See `PROJECT.md` for the original development plan
-- See `RULES.md` for details on the solving rules and their tiers
-- See `PROGRESS.md` for development history that was maintained during the initial development process.
-
 ## Acknowledgments
 
 Some of the tier 2 solving rules in `slants_rules.py` (specifically `rule_simon_unified`, `rule_vbitmap_propagation`, `rule_dead_end_avoidance`, and `rule_equivalence_classes`) were derived from the solving techniques in [Simon Tatham's Portable Puzzle Collection](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/), used under the MIT license.
