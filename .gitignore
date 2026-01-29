@@ -4,3 +4,18 @@ __pycache__/
 assets/
 original_pdfs/
 sample_finished_puzzle
+
+# C++ build artifacts
+cplusplus/*.o
+cplusplus/solve_puzzles
+
+# Go build artifacts
+golang/solve_puzzles
+
+# Rust build artifacts
+rust/src/bin/
+rust/src/lib.rs
+rust/target/
+
+# Attic (old/unused files)
+attic/*
