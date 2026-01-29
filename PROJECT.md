@@ -28,7 +28,7 @@ Here is the plan for making this software.  Make a PROGRESS.md file to track our
 
 6. If we are solving the test puzzle find another we are not solving, from the test suites, if possible.
 
-7. Implement a brute force solver in solver_BF.txt which uses our production rules to force moves, but then does trial and error DFS when it needs to, to find all possible solutions to a solvable puzzle.  Get it to solve the same puzzle that the PR solver cannot solve.  It's solve function should take the same arguments as solver_PR.py.
+7. Implement a brute force solver in solver_BF.txt which uses our production rules to force moves, but then does trial and error DFS when it needs to, to find all possible solutions to a solvable puzzle.  Get it to solve the same puzzle that the PR solver cannot solve.  Its solve function should take the same arguments as solver_PR.py.
 
 8. Implement a solving harness, solve_puzzles.py, that works with both solvers (loading via importlib), and can be tested on a testsuite of puzzles.  It will be used for testing the solvers as we develop them further, and for regression and performance tests.  It will accept these arguments:
     
@@ -58,7 +58,7 @@ options:
 
 12. Get a baseline for how the PR solver is doing on the test suites. Debug any current issues detected using the solving harness.  From here on out, keep a history of our progress on the test suites with this solver, summarizing what changes were made, and the elapsed times and solve% on each test suite.
 
-13. If the PR solver isn’t solving the majority of the test puzzles, continue working on improving the ruleset until it solving the majority of the test puzzles without using trial and error or no more than 1-level of lookahead.
+13. If the PR solver isn’t solving the majority of the test puzzles, continue working on improving the ruleset until it is solving the majority of the test puzzles without using trial and error or no more than 1-level of lookahead.
 
 14. Assign work scores to the rules which are proportional to their complexity. Make each solver return a cumulative work score for the puzzle.  For the BF puzzle, stack pushes/pops should also contribute a good bit to the score.
 

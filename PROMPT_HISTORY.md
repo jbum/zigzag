@@ -26,14 +26,14 @@ Yes. Continue with succesive steps as well, when the prior steps are completed s
 
 [ It quickly got to step 11, and improved the PR solver significantly by implementing more rules, including a 1-level look-ahead. Then it quickly got to step 15, and started working on the generator.  Then quickly generated a large test suite and made it to step 20 (10:27pm). It generated 3 sets of 60 puzzles.  Started working on the printing script.  Read my old script.  ]
 
-10:30pm
-At this point it compacted the conversation and initiated a new instance.  Good idea!
+[ 10:30pm
+At this point it compacted the conversation and initiated a new instance.  Good idea! ]
 
-It continued working on the print script.  At this point, I was worried because I had provided a picture, but not verbally described the appearance of these puzzles.
+[ It continued working on the print script.  At this point, I was worried because I had provided a picture, but not verbally described the appearance of these puzzles.  I have since added additional pdf instructions to the PROJECT.md as compared to the version I originally used. ]
 
-At 10:34 it reported project complete. It had managed to print the puzzles with pypy3 (I don’t think I ever figured out how to get that to work with reportlab).
+[ At 10:34 it reported project complete. It had managed to print the puzzles with pypy3 (I don’t think I ever figured out how to get that to work with reportlab). ]
 
-The PDFs show valid puzzles. They don’t look quite right, but I was able to fix this with a few additional prompts (I saved them so we can show a screenshot).  This is the kind of task for which LLMs are perhaps less well suited, something Yann Lecun has pointed out.
+[ The PDFs showed valid puzzles. They didn’t look quite right, but I was able to fix this with a few additional prompts (I saved them so we can show a screenshot).  This is the kind of task for which LLMs are perhaps less well suited, something Yann Lecun has pointed out.  At this point, my  ]
 
 Very good!  Just one more thing.  I can see on the PDFs that the numbers are printed directly on the vertices and well centered.  That's correct.  However, in a typical Slants puzzle, the givens numbers have circles behind them so you can see them more easily. Each circle has a white fill and black outline.  Also make the givens font a tad bigger.  The sample_puzzle.png shows what it looks like.
 
@@ -43,13 +43,13 @@ When fitting the puzzle into its quadrant, you need to take the circle radii int
 
 Puzzle number is still a little too close to the puzzle, and overlaps circles in the upper/left corner vertex,  when they occur. You may need to leave a gap for it and give it more distance from the puzzle.
 
-[ at this point, I’d see we’ve accomplished our goa.l ]
+[ at this point, I saw we had accomplished our goals, as laid out in PROJECT.md ]
 
 Nice!  Let's make a couple more sample puzzle sets.  60 12x12 puzzles, 60 15x15 puzzles.
 
-### Refinements
+### Refinements (post PROJECT.md)
 
-Let's make some larger brute force testsuites, akin to testsuites/GEN_small_testsuite.txt but larger.  Keep increasing the size by 2 in each dimension until it takes longer than 30 minutes to generate a suite.  Then  tell me how well the PR solver is doing on the new suites.
+Let's make some larger brute force testsuites, akin to testsuites/GEN_small_testsuite.txt but larger.  Keep increasing the size by 2 in each dimension until it takes longer than 30 minutes to generate a suite.  Then tell me how well the PR solver is doing on the new suites.
 
 commit these changes
 
@@ -57,7 +57,7 @@ What is the cost/tokens for this session?
 
 The drawing function in the print script is currently drawing the solution after drawing the givens, which causes the slashes to overlap the givens.  Draw the solution prior to drawing the givens (and their circles) so that the givens are atop the solution.  Then regenerate the PDFs.
 
-I've decided to publish this puzzle as "Zigzag" since "Slant" is considered a racial slur these days. Change the default title to "Zigzag Puzzles" in the print script and regenerate the pdfs.  Prior to regenerating the print scripts, make a utility shell script for regenerating the PDFs, make_pdfs.sh, so you can just run that.
+I've decided to publish this puzzle as "Zigzag" since "Slant" is considered a racial slur. Change the default title to "Zigzag Puzzles" in the print script and regenerate the pdfs.  Prior to regenerating the print scripts, make a utility shell script for regenerating the PDFs, make_pdfs.sh, so you can just run that.
 
 Using grep, make some new filtered test suites. SGT_easy.txt is all the easy puzzles from SGT_testsuite.txt, SGT_hard is all the hard puzzles from SGT_testsuite.txt.  PS_easy is all the easy puzzles from PS_testsuite.txt and PS_normal is all the so-called normal puzzles from PS_testsuite.txt.  We'll use these new test suites to make some improvements.
 
@@ -95,7 +95,7 @@ Let's run `gen_puzzles.py -n 60 -w 10 -ht 10 -r 1 -s PR -sym -o puzzledata/puzzl
 
 open puzzledata/puzzles_10x10_symmetry.pdf
 
-Modify the both solvers to return max-tier used during the solving process (the maximum tier# of any rule which made progress).  For the generator, output this information in the comment (tier=x). For the BF solver, if the solve invokes any stack-pushing, then the solve routine should automatically promote the puzzle to tier 3.  Since we don't use tier 3 rules for the PR solver when generating puzzles, I would expect that the max tier we should see on generated puzzles made with it is tier=2.  Confirm this is the case.  After all this, regenerate the puzzles in puzzledata/ so that we have max tier annotations.
+Modify both solvers to return max-tier used during the solving process (the maximum tier# of any rule which made progress).  For the generator, output this information in the comment (tier=x). For the BF solver, if the solve invokes any stack-pushing, then the solve routine should automatically promote the puzzle to tier 3.  Since we don't use tier 3 rules for the PR solver when generating puzzles, I would expect that the max tier we should see on generated puzzles made with it is tier=2.  Confirm this is the case.  After all this, regenerate the puzzles in puzzledata/ so that we have max tier annotations.
 
 I'm curious if there are some defaults causing the generated puzzles to always be tier 1, either in gen_puzzles or solve_PR.  I suspect not, but can you confirm?
 
@@ -105,7 +105,7 @@ I'm curious if there are some defaults causing the generated puzzles to always b
 
 `grep Elapsed puzzledata/* shows that the 15x15s took 35.49s and the 12x12s took 12.75s.  Let's generate a set of 16x16.  Then you can get an expected lower bound on the time for the 17x17s by comparing the time for the 16x16s to the 15x15s.  Use pypy3 for generating these. Keep increasing the size until the expected lower bound exceeds 20 minutes.  I want to see how big we can get in a reasonable amount of time.
 
-After we generate 25x25, go ahead and stop. 
+[esc] After we generate 25x25, go ahead and stop. 
 
 [ ultimately made it to 27x27 manually ]
 
@@ -120,7 +120,7 @@ modify make_pdfs.py to output the pdfs to the new ./pdfs/ directory, instead of 
 
 I am currently seeing about an inch of white space between the bottom of the last answer and the logo/instructions area, and the answers are too tightly packed.  Can you increase the available space so there is only 1/4 inch above the logo and the answers have more room?  If the answers are still overlapping, reduce them in size a bit.  Also, the answer numbers should now be lower down, but further to the left of the puzzle, where there is more room.
 
-[ 10 similar prompts as we fixed the pdfs, it's spatial reasoning for pdf generation not great ]
+[ 10 similar prompts as we fixed the pdfs, Opus 4.5's spatial reasoning for pdf generation is not great ]
 
 /compress
 
@@ -136,7 +136,7 @@ Use -r 1 on these files. You can reference the existing collections to see the c
 
 ### Copying idea from Simon Tatham
 
-The file /Users/jbum/Development/jbum_projects/puzzles/simon/puzzles-r8972/slant.c contains C source code for a constructor for Slant puzzles (the same kind we are working on).  I am curious if its solver contains any additional rules that are not currently in our rule set, or is it simply doing a brute force solve?
+The file slant.c contains C source code for a constructor for Slant puzzles (the same kind we are working on).  I am curious if its solver contains any additional rules that are not currently in our rule set, or is it simply doing a brute force solve?
 
 [ it identified 3 new rules ]
 
@@ -148,6 +148,7 @@ Let's update our board representation (slants_board.py) so that equivalent group
 
 I suspect the SGT test suite may have been generated with a newer version of the solver (since we're not yet solving SFT_hard at tier 2).  I've saved the latest version of Simon's solver in ./simon_slant.c.  Does it contain any new rules that were not in the older version we were looking at?  Is it pretty much the same?
 
+[ it was essentially the same ]
 
 Can you check to see if there is other information from Simon's rules that needs to be perpetuated in the board class in order for the rules to work together?  If the problem runs deeper than that, consider implementing simon's rules as a single rule that more closely mimics what he is doing.
 
@@ -166,7 +167,7 @@ Okay.  Try adding the simon rules to the BF solver.  I'm curious if it can solve
 
 Okay, can we finally solve the PS test suite in a reasonable amount of time with the BF solver?
 
-[yes]
+[ yes, it helped a lot ]
 
 Did you save the 1000 puzzles you generated somewhere, where I can look at them?
 
@@ -184,14 +185,7 @@ Read the Commands from the files in samplepuzzles/.  Then make a sh script calle
 
 my bad, I meant puzzledata/*.txt
 
-### Tool test
-[ I installed some tools and wanted to test them]
-
-How many puzzles varieties are on the krazydad.com website?
-
-
-
-* * *
+## High-performance solving and generation using other languages (Rust, Go, C++)
 
 I've made a golang subdirectory.  In that directory, make a GO language port of solve_puzzles.py (and it's two solvers) so I can do a performance test of GO vs pypy3 for solving my test suites. In that directory, documenthow to invoke the solve_puzzles script. I am unsure if I have GO installed on this machine. If so, it probably needs to be updated.
 
@@ -224,4 +218,4 @@ Let's make a new solver solver_SAP.py that will also work with our test harness.
 
 [ esc ] Sorry, I meant SAT (boolean satisfiability).
 
-[ worked a long time, did a lot of confirmation prompts -- this is a tough problem, due to the anti-loop rules in the puzzle, which make simple SAT solvers fail. Ultimately, the SAT solver proved to be slower and less reliable than the more targetted BF solver. I will likely encounterer similar issues with fillomino and slitherlink as well. ]
+[ Claude worked a long time, did a lot of confirmation prompts -- this is a tough problem, due to the anti-loop rules in the puzzle, which make simple SAT solvers fail. Ultimately, the SAT solver proved to be slower and less reliable than the more targetted BF solver. I will likely encounterer similar issues with fillomino and slitherlink as well.  Some puzzles, like Sudoku, are very tractible in SAT, but not a lot of the spatial reasoning puzzles are. ]
