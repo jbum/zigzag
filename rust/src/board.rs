@@ -558,6 +558,29 @@ impl Board {
         true
     }
 
+    /// Check if all placed cells match the known solution.
+    /// Returns false if any placed cell contradicts the solution.
+    pub fn check_against_solution(&self, known_solution: &str) -> bool {
+        let sol_bytes = known_solution.as_bytes();
+        for (i, cell) in self.cells.iter().enumerate() {
+            if cell.value == UNKNOWN {
+                continue;
+            }
+            if i >= sol_bytes.len() {
+                return false;
+            }
+            let expected = match sol_bytes[i] {
+                b'/' => SLASH,
+                b'\\' => BACKSLASH,
+                _ => continue,
+            };
+            if cell.value != expected {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Convert board to solution string.
     pub fn to_solution_string(&self) -> String {
         self.cells

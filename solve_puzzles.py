@@ -56,8 +56,8 @@ def main():
     parser.add_argument('-ofst', type=int, default=1,
                         help='Puzzle number to start at (1-based, default: 1)')
     parser.add_argument('-s', '--solver', type=str, default='PR',
-                        choices=['PR', 'BF'],
-                        help='Solver to use: PR (production rules) or BF (brute force)')
+                        choices=['PR', 'BF', 'SAT'],
+                        help='Solver to use: PR (production rules), BF (brute force), or SAT (SAT-based)')
     parser.add_argument('-mt', '--max_tier', type=int, default=10,
                         help='Maximum rule tier to use (1, 2, or 3). Default 10 uses all rules.')
     parser.add_argument('-ou', '--output_unsolved', action='store_true',

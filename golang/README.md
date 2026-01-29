@@ -2,6 +2,8 @@
 
 A Go port of the Python Slants (Gokigen Naname) puzzle solver for performance testing.
 
+For complete documentation of the puzzle format, solving rules, and Python scripts, see the main [README.md](../README.md) in the project root.
+
 ## Building
 
 ```bash

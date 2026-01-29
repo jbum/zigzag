@@ -126,22 +126,20 @@ fn get_valid_values(board: &mut Board, cx: usize, cy: usize) -> Vec<u8> {
     valid
 }
 
-/// Solve a puzzle using brute-force backtracking.
-pub fn solve(
-    givens_string: &str,
-    width: usize,
-    height: usize,
+/// Internal BF search logic shared by solve and solve_for_generation.
+fn bf_search(
+    board: &mut Board,
+    rules: &[(RuleInfo, fn(&mut Board) -> bool)],
     max_tier: u8,
-) -> Result<SolveResult, String> {
-    let mut board = Board::new(width, height, givens_string)?;
-    let rules = get_bf_rules();
-
+    known_solution: Option<&str>,
+) -> SolveResult {
     let mut solutions: Vec<String> = Vec::new();
     let mut stack: Vec<(BoardState, Option<u8>)> = vec![(board.save_state(), None)];
     let mut total_work_score = 0u32;
     let mut max_tier_used = 0u8;
     let mut used_branching = false;
     let mut push_pop_score = 0u32;
+    let mut first_iteration = true;
 
     while !stack.is_empty() && solutions.len() < 2 {
         let (state, _eliminated_value) = stack.pop().unwrap();
@@ -149,9 +147,24 @@ pub fn solve(
         push_pop_score += 1;
 
         // Apply rules
-        let (work_score, tier_used) = apply_rules_until_stuck(&mut board, &rules, max_tier);
+        let (work_score, tier_used) = apply_rules_until_stuck(board, rules, max_tier);
         total_work_score += work_score;
         max_tier_used = max_tier_used.max(tier_used);
+
+        // On first iteration with known_solution, check if rules went wrong
+        if first_iteration {
+            first_iteration = false;
+            if let Some(known) = known_solution {
+                if !board.check_against_solution(known) {
+                    return SolveResult {
+                        status: "unsolved".to_string(),
+                        solution: board.to_solution_string(),
+                        work_score: 0,
+                        max_tier_used: 0,
+                    };
+                }
+            }
+        }
 
         // Check validity
         if !board.is_valid() {
@@ -169,13 +182,13 @@ pub fn solve(
         }
 
         // Choose cell for branching
-        let (cx, cy) = match pick_best_cell(&board) {
+        let (cx, cy) = match pick_best_cell(board) {
             Some(cell) => cell,
             None => continue,
         };
 
         // Get valid values
-        let valid_values = get_valid_values(&mut board, cx, cy);
+        let valid_values = get_valid_values(board, cx, cy);
         if valid_values.is_empty() {
             continue;
         }
@@ -214,10 +227,37 @@ pub fn solve(
         max_tier_used = 3;
     }
 
-    Ok(SolveResult {
+    SolveResult {
         status,
         solution,
         work_score: total_work_score,
         max_tier_used,
-    })
+    }
+}
+
+/// Solve a puzzle using brute-force backtracking.
+pub fn solve(
+    givens_string: &str,
+    width: usize,
+    height: usize,
+    max_tier: u8,
+) -> Result<SolveResult, String> {
+    let mut board = Board::new(width, height, givens_string)?;
+    let rules = get_bf_rules();
+    Ok(bf_search(&mut board, &rules, max_tier, None))
+}
+
+/// Solve a puzzle for generation, with known_solution early-exit optimization.
+/// If initial rule application produces values contradicting the known solution,
+/// returns "unsolved" immediately without expensive backtracking.
+pub fn solve_for_generation(
+    givens_string: &str,
+    width: usize,
+    height: usize,
+    max_tier: u8,
+    known_solution: &str,
+) -> Result<SolveResult, String> {
+    let mut board = Board::new(width, height, givens_string)?;
+    let rules = get_bf_rules();
+    Ok(bf_search(&mut board, &rules, max_tier, Some(known_solution)))
 }

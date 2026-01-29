@@ -1,6 +1,8 @@
-# Slants Puzzle Solver (Rust)
+# Slants Puzzle Solver & Generator (Rust)
 
-A Rust port of the Python Slants (Gokigen Naname) puzzle solver for performance testing.
+A Rust port of the Python Slants (Gokigen Naname) puzzle solver and generator.
+
+For complete documentation of the puzzle format, solving rules, and Python scripts, see the main [README.md](../README.md) in the project root.
 
 ## Building
 
@@ -9,34 +11,36 @@ cd rust
 cargo build --release
 ```
 
-The binary will be at `target/release/slants_solver`.
+Binaries will be at `target/release/solve_puzzles` and `target/release/gen_puzzles`.
 
-## Usage
+## solve_puzzles
+
+Reads puzzles from a testsuite file and solves them.
 
 ```bash
 # Basic usage (uses PR solver by default)
-./target/release/slants_solver ../testsuites/test_sample.txt
+./target/release/solve_puzzles ../testsuites/test_sample.txt
 
 # Use BF (brute force) solver
-./target/release/slants_solver -s BF ../testsuites/test_sample.txt
+./target/release/solve_puzzles -s BF ../testsuites/test_sample.txt
 
 # Limit to first N puzzles
-./target/release/slants_solver -n 10 ../testsuites/SGT_testsuite.txt
+./target/release/solve_puzzles -n 10 ../testsuites/SGT_testsuite.txt
 
 # Start from puzzle number 5
-./target/release/slants_solver -ofst 5 ../testsuites/SGT_testsuite.txt
+./target/release/solve_puzzles -ofst 5 ../testsuites/SGT_testsuite.txt
 
 # Filter puzzles by name
-./target/release/slants_solver -f "8x8" ../testsuites/SGT_testsuite.txt
+./target/release/solve_puzzles -f "8x8" ../testsuites/SGT_testsuite.txt
 
 # Verbose output (testsuite-compatible format)
-./target/release/slants_solver -v ../testsuites/test_sample.txt
+./target/release/solve_puzzles -v ../testsuites/test_sample.txt
 
 # Limit maximum rule tier (1, 2, or 3)
-./target/release/slants_solver -mt 2 ../testsuites/test_sample.txt
+./target/release/solve_puzzles -mt 2 ../testsuites/test_sample.txt
 ```
 
-## Command Line Options
+### solve_puzzles Options
 
 | Option | Description |
 |--------|-------------|
@@ -48,13 +52,57 @@ The binary will be at `target/release/slants_solver`.
 | `-mt, --max_tier <N>` | Maximum rule tier to use (1, 2, or 3). Default: 10 (all) |
 | `-h, --help` | Show help message |
 
+## gen_puzzles
+
+Generates puzzles by creating random valid solutions, computing vertex clues, and reducing clues while maintaining unique solvability.
+
+```bash
+# Generate 10 puzzles (6x5, default size)
+./target/release/gen_puzzles -n 10
+
+# Generate 8x8 puzzles with a specific seed
+./target/release/gen_puzzles -n 20 -w 8 -ht 8 -r 42
+
+# Use BF solver for generation (allows tier 3 puzzles)
+./target/release/gen_puzzles -n 10 -w 12 -ht 12 -s BF
+
+# Output to a file (sorts by work score)
+./target/release/gen_puzzles -n 60 -w 10 -ht 10 -r 0 -o puzzles.txt
+
+# Generate only tier 2 (hard) puzzles
+./target/release/gen_puzzles -n 10 -w 8 -ht 8 -mingt 2 -maxgt 2
+
+# Enable symmetric clue reduction
+./target/release/gen_puzzles -n 10 -w 10 -ht 10 -sym
+
+# Verbose progress
+./target/release/gen_puzzles -n 5 -w 8 -ht 8 -v
+```
+
+### gen_puzzles Options
+
+| Option | Description |
+|--------|-------------|
+| `-n, --number <N>` | Number of puzzles to generate. Default: 1 |
+| `-r, --random-seed <N>` | Random seed. Default: 0 |
+| `-s, --solver <PR\|BF>` | Solver to use. Default: PR |
+| `-v, --verbose` | Verbose output to stderr |
+| `-w, --width <N>` | Puzzle width. Default: 6 |
+| `-ht, --height <N>` | Puzzle height. Default: 5 |
+| `-rp, --reduction_passes <N>` | Number of clue reduction passes. Default: 3 |
+| `-o, --output_file <FILE>` | Output file (default: stdout) |
+| `-sym, --symmetry` | Enable symmetric clue reduction |
+| `-mingt, --min_gen_tier <N>` | Minimum generated tier (1 or 2). Default: 1 |
+| `-maxgt, --max_gen_tier <N>` | Maximum generated tier (1 or 2). Default: 2 |
+| `-h, --help` | Show help message |
+
 ## Solvers
 
 ### PR (Production Rules)
-Uses a set of logical deduction rules to solve puzzles. Rules are applied in order until no more progress can be made. This solver is faster but may not solve all puzzles.
+Uses logical deduction rules to solve puzzles. Rules are applied in order until no more progress can be made. Solves tier 1 and tier 2 puzzles.
 
 ### BF (Brute Force)
-Uses production rules combined with stack-based backtracking. Can solve puzzles that require guessing but marks those as tier 3.
+Uses production rules combined with stack-based backtracking. Can solve all solvable puzzles; those requiring guessing are classified as tier 3.
 
 ## Testsuite File Format
 
@@ -63,55 +111,44 @@ Uses production rules combined with stack-based backtracking. Can solve puzzles 
 name	width	height	givens	answer	# optional comment
 ```
 
-Example:
-```
-SGT_8x8_test_1	8	8	c120a0b21h3a2114f3a2b2a4b2110a1a1b1c2132d1b1a33a1a1c0b		# From Simon Tatham's site
-```
-
 ## Comparison with Python Version
 
-This Rust version mirrors the Python `solve_puzzles.py` script:
-
 ```bash
-# Python version
+# Python solver
 pypy3 solve_puzzles.py testsuites/SGT_testsuite.txt -s PR
 
-# Rust version (equivalent)
-./rust/target/release/slants_solver testsuites/SGT_testsuite.txt -s PR
+# Rust solver (equivalent)
+./rust/target/release/solve_puzzles ../testsuites/SGT_testsuite.txt -s PR
+
+# Python generator
+pypy3 gen_puzzles.py -n 20 -w 10 -ht 10 -r 42 -s PR
+
+# Rust generator (equivalent)
+./rust/target/release/gen_puzzles -n 20 -w 10 -ht 10 -r 42 -s PR
 ```
 
-## Performance Testing
+## Performance
 
-To compare Rust vs PyPy3:
+### Solver Performance
 
-```bash
-# Time the Rust solver
-time ./rust/target/release/slants_solver testsuites/SGT_testsuite.txt -s BF
+Benchmark results on puzzles_12x12.txt (60 puzzles, PR solver -mt 2):
+- Rust: 0.013s
+- PyPy3: 0.903s (~70x slower)
 
-# Time the Python solver
-time pypy3 solve_puzzles.py testsuites/SGT_testsuite.txt -s BF
-```
+Benchmark results on puzzles_12x12_BF.txt (60 puzzles, BF solver):
+- Rust: 1.34s
+- PyPy3: 23.4s (~17x slower)
 
-## Known Limitations
+### Generator Performance
 
-The Rust PR solver has incomplete tier 2 rule implementations. It solves tier 1 puzzles correctly but may fail on puzzles requiring advanced rules. The BF solver will solve all solvable puzzles via backtracking.
-
-Benchmark results on SGT_testsuite.txt (60 puzzles):
-- Rust PR: 0.008s, 50% solve rate (tier 1 only)
-- Rust BF: 1.57s, 100% solve rate (with backtracking)
-- Python PR: 0.53s, 100% solve rate (full tier 2)
-- Python BF: 0.59s, 100% solve rate (full tier 2)
+Generating 10 puzzles (12x12, BF solver, seed 99):
+- Rust: 7.1s
+- Note: PR generator is much faster (~0.6s for 20 10x10 puzzles)
 
 ## Updating Rust
 
-Your Rust installation (1.64.0 from 2022) is outdated. To update:
+If your Rust installation is outdated:
 
 ```bash
 rustup update
 ```
-
-## Notes
-
-- The Rust version implements the core rules but some tier 2 rules need refinement
-- Work scores and tier tracking follow the same system as Python
-- The BF solver uses the same cell selection heuristics for branching

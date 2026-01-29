@@ -3,6 +3,17 @@ name = "slants_solver"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+rand = "0.8"
+
+[lib]
+name = "slants"
+path = "src/lib.rs"
+
+[[bin]]
+name = "solve_puzzles"
+path = "src/bin/solve_puzzles.rs"
+
+[[bin]]
+name = "gen_puzzles"
+path = "src/bin/gen_puzzles.rs"

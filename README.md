@@ -33,6 +33,8 @@ When generating puzzles for publication, only tiers 1 and 2 are used (tier 3 is 
 
 - **`solver_BF.py`** - Brute Force solver. Uses production rules first, then falls back to depth-first search with backtracking when needed. Can solve puzzles that the PR solver cannot, but uses trial-and-error methods.
 
+- **`solver_SAT.py`** - SAT-based solver. Uses production rules (tier 1-2) first, then encodes the remaining puzzle as a Boolean satisfiability problem and uses a SAT solver (pysat) to find solutions. **Note:** This solver is slower and less reliable than the BF solver due to the difficulty of encoding the no-loop constraint efficiently in SAT. Loop prevention is handled via iterative blocking rather than direct encoding, which can require many iterations for some puzzles.
+
 - **`slants_board.py`** - Board representation class. Provides data structures for representing the puzzle grid, cells, vertices, and their states.
 
 - **`slants_rules.py`** - Contains all the solving rules organized by tier. Rules range from simple (e.g., "if a clue has enough touches, fill the remaining cells to avoid it") to complex pattern recognition.
@@ -58,13 +60,17 @@ When generating puzzles for publication, only tiers 1 and 2 are used (tier 3 is 
 - **`solve_puzzles.py`** - Testing harness for evaluating solvers against test suites. Reads puzzle files and attempts to solve them, reporting success rates, work scores, and tier distributions.
 
   Options include:
-  - `-s`: Solver to use (PR or BF)
+  - `-s`: Solver to use (PR, BF, or SAT)
   - `-mt`: Maximum tier to use
   - `-v`: Verbose output with work scores
   - `-d`: Debug mode with colored grid display
   - `-f`: Filter puzzles by name
   - `-n`: Maximum number of puzzles to test
   - `-ou`: Output list of unsolved puzzles
+
+- **`make_mult_puzzles.py`** - Generates puzzles with multiple solutions from minimized puzzle files. Takes a `_BF` file (where puzzles have minimum clues for unique solvability) and removes one clue from each puzzle to create puzzles that have multiple solutions. Useful for testing solver detection of non-unique puzzles.
+
+  Usage: `python make_mult_puzzles.py puzzledata/puzzles_10x10_BF.txt`
 
 ### Puzzle Scraping
 
@@ -130,6 +136,45 @@ pypy3 print_puzzles_pdf.py puzzledata/puzzles_10x10.txt -o pdfs/puzzles_10x10.pd
 Regenerate all PDFs:
 ```bash
 pypy3 make_pdfs.py
+```
+
+## Rust Implementation
+
+A high-performance Rust port of the solver and generator is available in the `rust/` subdirectory. The Rust version provides significant performance improvements:
+
+- **Solver (PR)**: ~70x faster than PyPy3
+- **Solver (BF)**: ~17x faster than PyPy3
+- **Generator (BF)**: Comparable to PyPy3 with optimizations
+
+See `rust/README.md` for detailed documentation on building and using the Rust tools.
+
+```bash
+# Build Rust binaries
+cd rust && cargo build --release
+
+# Solve puzzles (equivalent to pypy3 solve_puzzles.py)
+./rust/target/release/solve_puzzles testsuites/SGT_testsuite.txt -s PR
+
+# Generate puzzles (equivalent to pypy3 gen_puzzles.py)
+./rust/target/release/gen_puzzles -n 60 -w 10 -ht 10 -r 42 -s PR -o puzzles.txt
+```
+
+## Go Implementation
+
+A Go port of the solver is available in the `golang/` subdirectory. The Go version focuses on solving performance:
+
+- **Solver (BF)**: ~25-30x faster than PyPy3
+
+Note: The Go implementation currently has some rule differences that may result in fewer puzzles being solved by rules alone (requiring more backtracking).
+
+See `golang/README.md` for detailed documentation.
+
+```bash
+# Build Go binary
+cd golang && go build -o solve_puzzles .
+
+# Solve puzzles
+./solve_puzzles -s PR ../testsuites/SGT_testsuite.txt
 ```
 
 ## Development Notes
