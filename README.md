@@ -6,6 +6,8 @@ This project contains a complete set of Python scripts for generating, solving, 
 
 Slants is a logic puzzle where you fill a grid with diagonal lines. Each cell must contain either a forward slash (`/`) or a backslash (`\`). The puzzle includes numbered clues at the vertices (intersections) of the grid, which indicate how many diagonal lines touch that vertex. The numbers range from 0 to 4, representing the count of diagonals that connect to that corner.
 
+![Sample Slants puzzle](sample_puzzle.png)
+
 **Key Rules:**
 - Each cell contains exactly one diagonal line (`/` or `\`)
 - The numbers at vertices indicate how many diagonals touch that corner
