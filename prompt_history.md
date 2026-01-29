@@ -1,15 +1,20 @@
 # prompt history
 
+This project was developed using a series of prompts in Claude code. The prompts are recorded here for posterity.
+
 Read PROJECT.md and begin the steps.
 
-Our last session got interrupted.  Let's continue working on the scraping task from PROJECT.md. It looks like
-  we have a candidate version of scrape_sgt.py, but I only see one puzzle in the SGT test suite.
+[ This worked suprisingly well and only needed a few subsequent prompts, given here, to urge it forward.  Nonetheless, I wasn't sure how reliable this was, so I tried it two more times, in fresh directories, and those attempts did not work as well.  The problem was that the PROJECT.md file did not contain enough explicit language about regression testing, so it would mark steps complete even if they weren't implemented properly.  For this first run, however, it worked well, and did the necessary testing along the way. ]
+
+[ The scraping subtask crashed at this point, while the foreground task was stuck at step 9. So I asked it to continue in the foreground, so I could monitor progress. ]
+
+Our last session got interrupted.  Let's continue working on the scraping task from PROJECT.md. It looks like we have a candidate version of scrape_sgt.py, but I only see one puzzle in the SGT test suite.
 
 Continue debugging the puzzle-slant scraper.
 
 Make your own plan version of PROGRESS.md so you can track progress.  You are now on step 9.
 
-(At this point, it was 10pm.  I probably should have said step 10, because I had already manually tested, and determined that the BF script was getting bogged down on some harder 15x15  puzzles in the PS test suite. I was curious to see if it would figure this out on it’s own and stop testing on those.  It wasted several minutes and then I interrupted it. )
+(At this point, it was 10pm.  I probably should have said step 10, because I had already manually tested, and determined that the BF script was getting bogged down on some harder 15x15  puzzles in the PS test suite. I was curious to see if it would figure this out on its own and stop testing on those.  It wasted several minutes and then I interrupted it. )
 
 10:10pm
 I'm aware that the brute force solver is too slow on the larger (15x15 and 20x20) puzzles in the PS test suite.  That's okay, we don't need to fix that.  Otherwise, I think the solvers are working, so let's proceed with step 10.
@@ -219,4 +224,4 @@ Let's make a new solver solver_SAP.py that will also work with our test harness.
 
 [ esc ] Sorry, I meant SAT (boolean satisfiability).
 
-[ worked a long time, did a lot of confirmation prompts -- this is a tough problem, due to the loop rules in the puzzle, which make simple SAT solvers fail ]
+[ worked a long time, did a lot of confirmation prompts -- this is a tough problem, due to the anti-loop rules in the puzzle, which make simple SAT solvers fail. Ultimately, the SAT solver proved to be slower and less reliable than the more targetted BF solver. I will likely encounterer similar issues with fillomino and slitherlink as well. ]

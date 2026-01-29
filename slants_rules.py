@@ -966,6 +966,10 @@ def rule_dead_end_avoidance(board):
     Uses the board's persistent exits/border tracking.
     A "dead end" is a non-border group with exits <= 1.
     Connecting two dead ends creates an isolated region - forbidden.
+
+    This rule was derived from techniques in Simon Tatham's Portable Puzzle
+    Collection (https://www.chiark.greenend.org.uk/~sgtatham/puzzles/),
+    used under the MIT license.
     """
     made_progress = False
 
@@ -1021,6 +1025,10 @@ def rule_equivalence_classes(board):
     1. Discovers new equivalences from clue constraints (need 1 from 2 adjacent unknowns)
     2. Propagates known values through equivalence classes
     3. Detects when one diagonal would force a loop in an equivalent cell
+
+    This rule was derived from techniques in Simon Tatham's Portable Puzzle
+    Collection (https://www.chiark.greenend.org.uk/~sgtatham/puzzles/),
+    used under the MIT license.
     """
     made_progress = False
 
@@ -1116,8 +1124,11 @@ def rule_vbitmap_propagation(board):
     3. A 2 clue propagates restrictions across
     4. When both v-shapes are ruled out between two cells, they're equivalent
 
-    This rule iterates until no more changes can be made to the v-bitmap,
-    similar to Simon Tatham's implementation.
+    This rule iterates until no more changes can be made to the v-bitmap.
+
+    This rule was derived from techniques in Simon Tatham's Portable Puzzle
+    Collection (https://www.chiark.greenend.org.uk/~sgtatham/puzzles/),
+    used under the MIT license.
     """
     made_progress = False
     w, h = board.width, board.height
@@ -1245,6 +1256,10 @@ def rule_simon_unified(board):
     1. Clue completion with equivalence tracking
     2. Loop avoidance + dead-end avoidance + equivalence-based filling
     3. V-bitmap propagation
+
+    This rule was derived from the slant solver in Simon Tatham's Portable
+    Puzzle Collection (https://www.chiark.greenend.org.uk/~sgtatham/puzzles/),
+    used under the MIT license.
     """
     w, h = board.width, board.height
     W, H = w + 1, h + 1

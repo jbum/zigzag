@@ -74,7 +74,9 @@ When generating puzzles for publication, only tiers 1 and 2 are used (tier 3 is 
 
 ### Puzzle Scraping
 
-- **`scrape_ps.py`** - Scrapes puzzles from [puzzle-slant.com](https://www.puzzle-slant.com/). Uses Selenium to extract puzzle data from the website and save it in the standard puzzle format.
+These scrapers were used to generate initial test suites which were used to develop and test the solvers. They are not used for generating new puzzles for publication.
+
+- **`scrape_ps.py`** - Scrapes puzzles from [puzzle-slant.com](https://www.puzzle-slant.com/). Uses Selenium to extract puzzle data from the website and save it in the standard puzzle format.  These puzzles appear to use a similar constructor to Simon Tatham's (in that the easy/normal puzzles both divide neatly into tier 1 and tier 2 puzzles)
 
 - **`scrape_sgt.py`** - Scrapes puzzles from [Simon Tatham's puzzle collection](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/slant.html). Extracts puzzle data from the web interface.
 
@@ -184,3 +186,11 @@ cd golang && go build -o solve_puzzles .
 - See `PROJECT.md` for the original development plan
 - See `RULES.md` for details on the solving rules and their tiers
 - See `PROGRESS.md` for development history that was maintained during the initial development process.
+
+## Acknowledgments
+
+Some of the tier 2 solving rules in `slants_rules.py` (specifically `rule_simon_unified`, `rule_vbitmap_propagation`, `rule_dead_end_avoidance`, and `rule_equivalence_classes`) were derived from the solving techniques in [Simon Tatham's Portable Puzzle Collection](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/), used under the MIT license.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
